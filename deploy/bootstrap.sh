@@ -16,7 +16,7 @@ apt-get install -y --no-install-recommends \
   ca-certificates ffmpeg git python3 python3-venv python3-pip
 
 if ! id "$APP_USER" >/dev/null 2>&1; then
-  useradd --system --create-home --home-dir "$APP_DIR" --shell /usr/sbin/nologin "$APP_USER"
+  useradd --system --no-create-home --home-dir "$APP_DIR" --shell /usr/sbin/nologin "$APP_USER"
 fi
 
 if [[ -d "$APP_DIR/.git" ]]; then
