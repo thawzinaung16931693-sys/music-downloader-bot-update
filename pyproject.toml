@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=78"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "telegram-music-bot"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "Telethon>=1.40,<2",
+    "python-dotenv>=1.1,<2",
+    "yt-dlp[default]>=2025.8.27",
+]
+
+[project.scripts]
+music-bot = "music_bot.bot:main"
+
+[tool.setuptools.packages.find]
+include = ["music_bot*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

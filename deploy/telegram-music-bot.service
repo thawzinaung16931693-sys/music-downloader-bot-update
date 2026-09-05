@@ -1,0 +1,22 @@
+[Unit]
+Description=Telegram music downloader bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=musicbot
+Group=musicbot
+WorkingDirectory=/opt/telegram-music-bot
+EnvironmentFile=/opt/telegram-music-bot/.env
+ExecStart=/opt/telegram-music-bot/.venv/bin/python -m music_bot.bot
+Restart=on-failure
+RestartSec=10
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectHome=true
+ProtectSystem=full
+ReadWritePaths=/opt/telegram-music-bot
+
+[Install]
+WantedBy=multi-user.target
