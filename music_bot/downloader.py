@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ipaddress
+import logging
 import re
 import socket
 from dataclasses import dataclass
@@ -11,6 +12,8 @@ import json
 from collections.abc import Callable
 
 import yt_dlp
+
+LOGGER = logging.getLogger(__name__)
 
 SPOTIFY_HOSTS = {"open.spotify.com"}
 URL_PATTERN = re.compile(r"https?://[^\s<>]+", re.IGNORECASE)
@@ -55,7 +58,15 @@ def search_tracks(
 ) -> list[SearchResult]:
     search_url = build_search_url(query, field=field)
     try:
-        with yt_dlp.YoutubeDL({"quiet": True, "no_warnings": True, "noplaylist": True}) as ydl:
+        with yt_dlp.YoutubeDL(
+            {
+                "quiet": True,
+                "no_warnings": True,
+                "noplaylist": True,
+                "ignoreerrors": True,
+                "logger": _QuietYtdlpLogger(),
+            }
+        ) as ydl:
             info = ydl.extract_info(search_url, download=False)
     except yt_dlp.utils.DownloadError as exc:
         raise DownloadError("I could not search for that music right now.") from exc
@@ -80,6 +91,17 @@ def search_tracks(
     if not results:
         raise DownloadError("No public results were found for that search.")
     return results
+
+
+class _QuietYtdlpLogger:
+    def debug(self, message: str) -> None:
+        return
+
+    def warning(self, message: str) -> None:
+        return
+
+    def error(self, message: str) -> None:
+        LOGGER.debug("yt-dlp search candidate skipped: %s", message)
 
 
 def extract_url(text: str) -> str | None:
@@ -162,6 +184,10 @@ def download_track(
         raise
     except yt_dlp.utils.DownloadError as exc:
         message = str(exc).removeprefix("ERROR: ").strip()
+        if "Sign in to confirm" in message or "not available" in message:
+            raise DownloadError(
+                "This result is unavailable from the provider. Please choose another result."
+            ) from exc
         raise DownloadError(f"I could not download this track: {message[:350]}") from exc
 
     mp3_path = prepared_path.with_suffix(".mp3")
