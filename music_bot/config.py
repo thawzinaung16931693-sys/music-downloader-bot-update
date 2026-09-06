@@ -8,8 +8,6 @@ from dotenv import load_dotenv
 
 @dataclass(frozen=True)
 class Config:
-    api_id: int
-    api_hash: str
     bot_token: str
     audio_quality: int = 320
     max_duration_seconds: int = 900
@@ -22,7 +20,7 @@ class Config:
         load_dotenv()
         missing = [
             name
-            for name in ("TELEGRAM_API_ID", "TELEGRAM_API_HASH", "TELEGRAM_BOT_TOKEN")
+            for name in ("TELEGRAM_BOT_TOKEN",)
             if not os.getenv(name)
         ]
         if missing:
@@ -33,8 +31,6 @@ class Config:
             raise ValueError("AUDIO_QUALITY must be one of: 128, 192, 256, 320")
 
         return cls(
-            api_id=int(os.environ["TELEGRAM_API_ID"]),
-            api_hash=os.environ["TELEGRAM_API_HASH"],
             bot_token=os.environ["TELEGRAM_BOT_TOKEN"],
             audio_quality=quality,
             max_duration_seconds=_bounded_int("MAX_DURATION_SECONDS", 900, 1, 86_400),

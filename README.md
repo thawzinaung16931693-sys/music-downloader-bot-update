@@ -1,8 +1,9 @@
 # Telegram Music Bot
 
-A Telethon bot that accepts a public music link, extracts its best available audio
-with yt-dlp, converts it to MP3 with FFmpeg, and sends it back as a Telegram audio
-file.
+A Telegram Bot API bot that accepts a public music link, extracts its best available
+audio with yt-dlp, converts it to MP3 with FFmpeg, and sends it back as a Telegram
+audio file. It uses `python-telegram-bot`; no Telethon user session or Telegram API
+ID/hash is required.
 
 ## Provider behavior
 
@@ -20,7 +21,6 @@ can change when sites update their APIs or anti-bot systems.
 
 - Python 3.11 or newer
 - FFmpeg available on `PATH`
-- Telegram API credentials from <https://my.telegram.org>
 - A bot token from Telegram's `@BotFather`
 
 ## Setup
@@ -33,7 +33,7 @@ pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
-Edit `.env` with the Telegram credentials, then verify FFmpeg and start the bot:
+Edit `.env` with the bot token, then verify FFmpeg and start the bot:
 
 ```powershell
 ffmpeg -version

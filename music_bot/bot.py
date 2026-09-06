@@ -5,9 +5,15 @@ import logging
 import tempfile
 from pathlib import Path
 
-from telethon import TelegramClient, events
-from telethon.tl.custom import Message
-from telethon.tl.types import DocumentAttributeAudio
+from telegram import Update
+from telegram.constants import ChatAction
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    ContextTypes,
+    MessageHandler,
+    filters,
+)
 
 from .config import Config
 from .downloader import DownloadError, download_track, extract_url
@@ -22,28 +28,25 @@ HELP_TEXT = (
 )
 
 
-def create_bot(config: Config) -> TelegramClient:
-    client = TelegramClient("music_bot", config.api_id, config.api_hash)
+def create_application(config: Config) -> Application:
+    application = Application.builder().token(config.bot_token).build()
     semaphore = asyncio.Semaphore(config.download_workers)
 
-    @client.on(events.NewMessage(pattern=r"^/(start|help)(?:@\w+)?$"))
-    async def help_handler(event: events.NewMessage.Event) -> None:
-        await event.respond(HELP_TEXT, link_preview=False)
+    async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        if update.message:
+            await update.message.reply_text(HELP_TEXT, disable_web_page_preview=True)
 
-    @client.on(events.NewMessage(incoming=True))
-    async def download_handler(event: events.NewMessage.Event) -> None:
-        message = event.message
-        if not isinstance(message, Message) or not message.raw_text:
-            return
-        if message.raw_text.startswith("/"):
+    async def download_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        message = update.message
+        if not message or not message.text:
             return
 
-        url = extract_url(message.raw_text)
+        url = extract_url(message.text)
         if not url:
-            await event.reply("Please send a public music link. Use /help for details.")
+            await message.reply_text("Please send a public music link. Use /help for details.")
             return
 
-        status = await event.reply("Processing your link...")
+        status = await message.reply_text("Processing your link...")
         try:
             async with semaphore:
                 with tempfile.TemporaryDirectory(prefix="music-bot-") as temp_dir:
@@ -56,30 +59,26 @@ def create_bot(config: Config) -> TelegramClient:
                         max_file_size_mb=config.max_file_size_mb,
                         cookies_file=config.cookies_file,
                     )
-                    await status.edit("Uploading MP3...")
-                    await client.send_file(
-                        event.chat_id,
-                        track.path,
-                        caption=f"{track.artist} - {track.title}",
-                        reply_to=message.id,
-                        mime_type="audio/mpeg",
-                        voice_note=False,
-                        attributes=[
-                            DocumentAttributeAudio(
-                                duration=track.duration,
-                                title=track.title,
-                                performer=track.artist,
-                            )
-                        ],
-                    )
+                    await status.edit_text("Uploading MP3...")
+                    await message.chat.send_action(ChatAction.UPLOAD_DOCUMENT)
+                    with track.path.open("rb") as audio_file:
+                        await message.reply_audio(
+                            audio=audio_file,
+                            title=track.title,
+                            performer=track.artist,
+                            duration=track.duration or None,
+                            caption=f"{track.artist} - {track.title}",
+                        )
             await status.delete()
         except DownloadError as exc:
-            await status.edit(str(exc), link_preview=False)
+            await status.edit_text(str(exc), disable_web_page_preview=True)
         except Exception:
             LOGGER.exception("Unexpected failure while processing %s", url)
-            await status.edit("An unexpected error occurred while processing this link.")
+            await status.edit_text("An unexpected error occurred while processing this link.")
 
-    return client
+    application.add_handler(CommandHandler(["start", "help"], help_handler))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, download_handler))
+    return application
 
 
 def main() -> None:
@@ -88,10 +87,8 @@ def main() -> None:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
     config = Config.from_env()
-    client = create_bot(config)
-    LOGGER.info("Starting Telegram music bot")
-    client.start(bot_token=config.bot_token)
-    client.run_until_disconnected()
+    LOGGER.info("Starting Telegram Bot API music bot")
+    create_application(config).run_polling(allowed_updates=Update.ALL_TYPES)
 
 
 if __name__ == "__main__":
