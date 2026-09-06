@@ -126,3 +126,24 @@ sudo bash /opt/telegram-music-bot/deploy/update.sh
 The service runs under a dedicated non-login `musicbot` user and automatically
 restarts after failures. Keep SSH restricted to your admin IP where practical, and
 do not expose unnecessary firewall ports.
+
+### Storage cleanup
+
+The deployment installs `telegram-music-bot-storage.timer`, which runs hourly and
+removes stale `music-bot-*` temporary directories older than 60 minutes. It also
+checks the filesystem containing the application and writes warnings at 80% usage
+and critical alerts at 90% usage to the system journal. It does not remove `.env`,
+cookies, Git data, or application files.
+
+Inspect the timer and storage logs:
+
+```bash
+sudo systemctl status telegram-music-bot-storage.timer
+sudo journalctl -t telegram-music-bot-storage -n 30 --no-pager
+```
+
+Run a cleanup manually if needed:
+
+```bash
+sudo systemctl start telegram-music-bot-storage.service
+```

@@ -1,0 +1,6 @@
+[Unit]
+Description=Clean temporary Telegram music bot files and check disk usage
+
+[Service]
+Type=oneshot
+ExecStart=/opt/telegram-music-bot-storage-cleanup.sh

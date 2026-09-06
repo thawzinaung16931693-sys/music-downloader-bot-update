@@ -42,6 +42,12 @@ python3 -m venv "$APP_DIR/.venv"
 install -d -m 0750 -o "$APP_USER" -g "$APP_USER" "$APP_DIR/runtime"
 install -m 0644 "$APP_DIR/deploy/telegram-music-bot.service" \
   /etc/systemd/system/telegram-music-bot.service
+install -m 0750 -o root -g "$APP_USER" "$APP_DIR/deploy/cleanup-storage.sh" \
+  /opt/telegram-music-bot-storage-cleanup.sh
+install -m 0644 "$APP_DIR/deploy/telegram-music-bot-storage.service" \
+  /etc/systemd/system/telegram-music-bot-storage.service
+install -m 0644 "$APP_DIR/deploy/telegram-music-bot-storage.timer" \
+  /etc/systemd/system/telegram-music-bot-storage.timer
 systemctl daemon-reload
 
 if [[ ! -f "$APP_DIR/.env" ]]; then
@@ -53,4 +59,6 @@ chown -R "$APP_USER:$APP_USER" "$APP_DIR"
 chown root:"$APP_USER" "$APP_DIR/.env"
 chmod 0640 "$APP_DIR/.env"
 systemctl enable telegram-music-bot
+systemctl enable telegram-music-bot-storage.timer
+systemctl start telegram-music-bot-storage.timer
 echo "Bootstrap complete. Configure $APP_DIR/.env, then run: systemctl start telegram-music-bot"
