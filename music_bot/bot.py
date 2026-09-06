@@ -29,7 +29,7 @@ HELP_TEXT = (
     "You can also send plain text such as: Daft Punk One More Time\n\n"
     "Only download audio you have permission to use."
 )
-RESULT_COUNT = 5
+SEARCH_PAGE_SIZE = 5
 BOT_COMMANDS = [
     BotCommand("start", "Start the music bot"),
     BotCommand("help", "Show help and usage"),
@@ -65,16 +65,9 @@ def create_application(config: Config) -> Application:
         status = await message.reply_text(f"Searching for {query.strip()}...")
         try:
             results = await asyncio.to_thread(search_tracks, query, field=field)
-            context.user_data["search_results"] = results[:RESULT_COUNT]
+            context.user_data["search_results"] = results
             context.user_data["search_owner"] = update.effective_user.id if update.effective_user else None
-            keyboard = [
-                [InlineKeyboardButton(_result_label(index, result), callback_data=f"pick:{index}")]
-                for index, result in enumerate(results[:RESULT_COUNT])
-            ]
-            await status.edit_text(
-                "Choose a track to download:",
-                reply_markup=InlineKeyboardMarkup(keyboard),
-            )
+            await _show_search_page(status, context, 0)
         except DownloadError as exc:
             await status.edit_text(str(exc))
         except Exception:
@@ -119,6 +112,20 @@ def create_application(config: Config) -> Application:
         await query.edit_message_text(f"Downloading: {result.artist} - {result.title}")
         await download_url(update, context, result.url, reply_to=query.message.message_id)
 
+    async def next_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        query = update.callback_query
+        if not query:
+            return
+        if query.from_user.id != context.user_data.get("search_owner"):
+            await query.answer("Run your own search to browse results.", show_alert=True)
+            return
+        try:
+            page = int((query.data or "").split(":", 1)[1])
+            await query.answer()
+            await _show_search_page(query.message, context, page)
+        except (ValueError, KeyError, TypeError):
+            await query.answer("Those search results have expired.", show_alert=True)
+
     async def download_url(
         update: Update,
         context: ContextTypes.DEFAULT_TYPE,
@@ -156,8 +163,33 @@ def create_application(config: Config) -> Application:
     application.add_handler(CommandHandler("search", search_command))
     application.add_handler(CommandHandler(["title", "artist"], field_command))
     application.add_handler(CallbackQueryHandler(pick_handler, pattern=r"^pick:\d+$"))
+    application.add_handler(CallbackQueryHandler(next_handler, pattern=r"^next:\d+$"))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
     return application
+
+
+async def _show_search_page(message, context: ContextTypes.DEFAULT_TYPE, page: int) -> None:
+    results: list[SearchResult] = context.user_data["search_results"]
+    start = page * SEARCH_PAGE_SIZE
+    page_results = results[start : start + SEARCH_PAGE_SIZE]
+    if not page_results:
+        await message.edit_text("There are no more results. Choose a track from the previous page.")
+        return
+    keyboard = [
+        [InlineKeyboardButton(_result_label(start + index, result), callback_data=f"pick:{start + index}")]
+        for index, result in enumerate(page_results)
+    ]
+    navigation = []
+    if page > 0:
+        navigation.append(InlineKeyboardButton("Previous", callback_data=f"next:{page - 1}"))
+    if start + SEARCH_PAGE_SIZE < len(results):
+        navigation.append(InlineKeyboardButton("Next", callback_data=f"next:{page + 1}"))
+    if navigation:
+        keyboard.append(navigation)
+    await message.edit_text(
+        f"Choose a track to download (page {page + 1}):",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+    )
 
 
 def _result_label(index: int, result: SearchResult) -> str:

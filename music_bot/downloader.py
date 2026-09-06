@@ -42,7 +42,7 @@ def build_search_url(query: str, *, field: str = "search") -> str:
         raise DownloadError(f"Please provide a {field} to search for.")
     if len(query) > 200:
         raise DownloadError("Search text must be 200 characters or fewer.")
-    return f"ytsearch5:{query} audio"
+    return f"ytsearch20:{query} audio"
 
 
 def search_tracks(query: str, *, field: str = "search") -> list[SearchResult]:
