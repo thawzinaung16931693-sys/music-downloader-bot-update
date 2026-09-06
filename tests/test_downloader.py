@@ -4,6 +4,7 @@ from music_bot.downloader import (
     DownloadError,
     _is_spotify_url,
     _spotify_search,
+    build_search_url,
     extract_url,
     validate_public_url,
 )
@@ -37,3 +38,14 @@ def test_spotify_host_detection_does_not_accept_suffix_attack() -> None:
 def test_spotify_playlist_is_rejected_without_network_request() -> None:
     with pytest.raises(DownloadError, match="playlists and albums"):
         _spotify_search("https://open.spotify.com/playlist/123", None)
+
+
+def test_build_search_url_normalizes_query() -> None:
+    assert build_search_url("  Daft   Punk   One More Time ") == (
+        "ytsearch1:Daft Punk One More Time audio"
+    )
+
+
+def test_build_search_url_rejects_empty_query() -> None:
+    with pytest.raises(DownloadError, match="provide a title"):
+        build_search_url(" ", field="title")

@@ -48,6 +48,20 @@ improve a lower-quality source.
 Some providers may require cookies. Export a Netscape-format cookie file, set
 `COOKIES_FILE=cookies.txt`, and keep that private file out of version control.
 
+## Search commands
+
+The bot can search for one result and return it as an MP3:
+
+```text
+/search Daft Punk One More Time
+/title One More Time
+/artist Daft Punk
+```
+
+Search uses YouTube's yt-dlp search backend. The result is selected automatically,
+so search quality depends on the query and available public results. Search and URL
+downloads use the same duration and file-size limits.
+
 ## Tests
 
 ```powershell

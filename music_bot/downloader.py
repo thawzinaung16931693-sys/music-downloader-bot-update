@@ -28,6 +28,15 @@ class DownloadedTrack:
     thumbnail: str | None
 
 
+def build_search_url(query: str, *, field: str = "search") -> str:
+    query = " ".join(query.split()).strip()
+    if not query:
+        raise DownloadError(f"Please provide a {field} to search for.")
+    if len(query) > 200:
+        raise DownloadError("Search text must be 200 characters or fewer.")
+    return f"ytsearch1:{query} audio"
+
+
 def extract_url(text: str) -> str | None:
     match = URL_PATTERN.search(text)
     return match.group(0).rstrip(".,);]}") if match else None
