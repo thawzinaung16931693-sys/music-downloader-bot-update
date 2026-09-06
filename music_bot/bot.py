@@ -94,7 +94,9 @@ def create_application(config: Config) -> Application:
             parse_mode="HTML",
         )
         try:
-            results = await asyncio.to_thread(search_tracks, query, field=field)
+            results = await asyncio.to_thread(
+                search_tracks, query, field=field, max_duration=min(config.max_duration_seconds, 900)
+            )
             context.user_data["search_results"] = results
             context.user_data["search_owner"] = update.effective_user.id if update.effective_user else None
             first = results[0] if results else None

@@ -14,6 +14,7 @@ import yt_dlp
 
 SPOTIFY_HOSTS = {"open.spotify.com"}
 URL_PATTERN = re.compile(r"https?://[^\s<>]+", re.IGNORECASE)
+MAX_SEARCH_DURATION_SECONDS = 15 * 60
 
 
 class DownloadError(Exception):
@@ -48,7 +49,9 @@ def build_search_url(query: str, *, field: str = "search") -> str:
     return f"ytsearch20:{query} audio"
 
 
-def search_tracks(query: str, *, field: str = "search") -> list[SearchResult]:
+def search_tracks(
+    query: str, *, field: str = "search", max_duration: int = MAX_SEARCH_DURATION_SECONDS
+) -> list[SearchResult]:
     search_url = build_search_url(query, field=field)
     try:
         with yt_dlp.YoutubeDL({"quiet": True, "no_warnings": True, "noplaylist": True}) as ydl:
@@ -60,12 +63,15 @@ def search_tracks(query: str, *, field: str = "search") -> list[SearchResult]:
     for entry in info.get("entries", []) if info else []:
         if not entry or not entry.get("webpage_url"):
             continue
+        duration = int(entry.get("duration") or 0)
+        if duration > min(max_duration, MAX_SEARCH_DURATION_SECONDS) or not duration:
+            continue
         results.append(
             SearchResult(
                 url=str(entry["webpage_url"]),
                 title=str(entry.get("title") or "Unknown title"),
                 artist=str(entry.get("artist") or entry.get("uploader") or "Unknown artist"),
-                duration=int(entry.get("duration") or 0),
+                duration=duration,
                 thumbnail=entry.get("thumbnail"),
                 source=str(urlparse(str(entry["webpage_url"])).hostname or "Audio source"),
             )

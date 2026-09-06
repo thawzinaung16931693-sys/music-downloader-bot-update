@@ -7,7 +7,9 @@ from music_bot.downloader import (
     build_search_url,
     extract_url,
     validate_public_url,
+    search_tracks,
 )
+from unittest.mock import patch
 
 
 def test_extract_url_from_message() -> None:
@@ -49,3 +51,16 @@ def test_build_search_url_normalizes_query() -> None:
 def test_build_search_url_rejects_empty_query() -> None:
     with pytest.raises(DownloadError, match="provide a title"):
         build_search_url(" ", field="title")
+
+
+def test_search_filters_long_and_unknown_duration_results() -> None:
+    entries = [
+        {"webpage_url": "https://example.com/long", "title": "Long", "duration": 901},
+        {"webpage_url": "https://example.com/unknown", "title": "Unknown"},
+        {"webpage_url": "https://example.com/short", "title": "Short", "duration": 900},
+    ]
+    fake_info = {"entries": entries}
+    with patch("music_bot.downloader.yt_dlp.YoutubeDL") as youtube_dl:
+        youtube_dl.return_value.__enter__.return_value.extract_info.return_value = fake_info
+        results = search_tracks("test")
+    assert [result.title for result in results] == ["Short"]
