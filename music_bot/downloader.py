@@ -54,19 +54,24 @@ def build_search_url(query: str, *, field: str = "search") -> str:
 
 
 def search_tracks(
-    query: str, *, field: str = "search", max_duration: int = MAX_SEARCH_DURATION_SECONDS
+    query: str,
+    *,
+    field: str = "search",
+    max_duration: int = MAX_SEARCH_DURATION_SECONDS,
+    cookies_file: str | None = None,
 ) -> list[SearchResult]:
     search_url = build_search_url(query, field=field)
     try:
-        with yt_dlp.YoutubeDL(
-            {
-                "quiet": True,
-                "no_warnings": True,
-                "noplaylist": True,
-                "ignoreerrors": True,
-                "logger": _QuietYtdlpLogger(),
-            }
-        ) as ydl:
+        options: dict[str, object] = {
+            "quiet": True,
+            "no_warnings": True,
+            "noplaylist": True,
+            "ignoreerrors": True,
+            "logger": _QuietYtdlpLogger(),
+        }
+        if cookies_file:
+            options["cookiefile"] = cookies_file
+        with yt_dlp.YoutubeDL(options) as ydl:
             info = ydl.extract_info(search_url, download=False)
     except yt_dlp.utils.DownloadError as exc:
         raise DownloadError("I could not search for that music right now.") from exc

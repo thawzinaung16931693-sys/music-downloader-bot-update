@@ -95,7 +95,11 @@ def create_application(config: Config) -> Application:
         )
         try:
             results = await asyncio.to_thread(
-                search_tracks, query, field=field, max_duration=min(config.max_duration_seconds, 900)
+                search_tracks,
+                query,
+                field=field,
+                max_duration=min(config.max_duration_seconds, 900),
+                cookies_file=config.cookies_file,
             )
             context.user_data["search_results"] = results
             context.user_data["search_owner"] = update.effective_user.id if update.effective_user else None
