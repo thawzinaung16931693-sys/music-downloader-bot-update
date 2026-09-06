@@ -28,13 +28,46 @@ class DownloadedTrack:
     thumbnail: str | None
 
 
+@dataclass(frozen=True)
+class SearchResult:
+    url: str
+    title: str
+    artist: str
+    duration: int
+
+
 def build_search_url(query: str, *, field: str = "search") -> str:
     query = " ".join(query.split()).strip()
     if not query:
         raise DownloadError(f"Please provide a {field} to search for.")
     if len(query) > 200:
         raise DownloadError("Search text must be 200 characters or fewer.")
-    return f"ytsearch1:{query} audio"
+    return f"ytsearch5:{query} audio"
+
+
+def search_tracks(query: str, *, field: str = "search") -> list[SearchResult]:
+    search_url = build_search_url(query, field=field)
+    try:
+        with yt_dlp.YoutubeDL({"quiet": True, "no_warnings": True, "noplaylist": True}) as ydl:
+            info = ydl.extract_info(search_url, download=False)
+    except yt_dlp.utils.DownloadError as exc:
+        raise DownloadError("I could not search for that music right now.") from exc
+
+    results: list[SearchResult] = []
+    for entry in info.get("entries", []) if info else []:
+        if not entry or not entry.get("webpage_url"):
+            continue
+        results.append(
+            SearchResult(
+                url=str(entry["webpage_url"]),
+                title=str(entry.get("title") or "Unknown title"),
+                artist=str(entry.get("artist") or entry.get("uploader") or "Unknown artist"),
+                duration=int(entry.get("duration") or 0),
+            )
+        )
+    if not results:
+        raise DownloadError("No public results were found for that search.")
+    return results
 
 
 def extract_url(text: str) -> str | None:
@@ -67,7 +100,8 @@ def download_track(
     max_file_size_mb: int,
     cookies_file: str | None = None,
 ) -> DownloadedTrack:
-    validate_public_url(url)
+    if not url.startswith("ytsearch"):
+        validate_public_url(url)
     target = _spotify_search(url, cookies_file) if _is_spotify_url(url) else url
     output_template = str(output_dir / "%(title).180B-%(id)s.%(ext)s")
     options: dict[str, object] = {

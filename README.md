@@ -50,7 +50,7 @@ Some providers may require cookies. Export a Netscape-format cookie file, set
 
 ## Search commands
 
-The bot can search for one result and return it as an MP3:
+The bot can search for several results and lets you choose which one to download:
 
 ```text
 /search Daft Punk One More Time
@@ -58,9 +58,12 @@ The bot can search for one result and return it as an MP3:
 /artist Daft Punk
 ```
 
-Search uses YouTube's yt-dlp search backend. The result is selected automatically,
-so search quality depends on the query and available public results. Search and URL
-downloads use the same duration and file-size limits.
+The bot displays up to five numbered inline buttons. Click one to download that
+specific result. Plain text without a URL is treated as a general keyword search.
+
+Search uses YouTube's yt-dlp search backend, and search quality depends on the query
+and available public results. Search and URL downloads use the same duration and
+file-size limits.
 
 ## Tests
 
