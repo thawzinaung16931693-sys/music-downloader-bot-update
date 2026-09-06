@@ -5,7 +5,7 @@ import logging
 import tempfile
 from pathlib import Path
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import ChatAction
 from telegram.ext import (
     Application,
@@ -30,10 +30,26 @@ HELP_TEXT = (
     "Only download audio you have permission to use."
 )
 RESULT_COUNT = 5
+BOT_COMMANDS = [
+    BotCommand("start", "Start the music bot"),
+    BotCommand("help", "Show help and usage"),
+    BotCommand("search", "Search by artist and title"),
+    BotCommand("title", "Search by song title"),
+    BotCommand("artist", "Search by artist name"),
+]
 
 
 def create_application(config: Config) -> Application:
-    application = Application.builder().token(config.bot_token).build()
+    async def configure_command_menu(application: Application) -> None:
+        await application.bot.set_my_commands(BOT_COMMANDS)
+        LOGGER.info("Telegram command menu configured")
+
+    application = (
+        Application.builder()
+        .token(config.bot_token)
+        .post_init(configure_command_menu)
+        .build()
+    )
     semaphore = asyncio.Semaphore(config.download_workers)
 
     async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

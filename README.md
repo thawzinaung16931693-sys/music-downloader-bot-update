@@ -60,6 +60,8 @@ The bot can search for several results and lets you choose which one to download
 
 The bot displays up to five numbered inline buttons. Click one to download that
 specific result. Plain text without a URL is treated as a general keyword search.
+The same commands are registered in Telegram's command menu, available from the
+slash button in the chat.
 
 Search uses YouTube's yt-dlp search backend, and search quality depends on the query
 and available public results. Search and URL downloads use the same duration and
