@@ -297,6 +297,11 @@ def _result_label(index: int, result: SearchResult) -> str:
     return label[:58] + duration
 
 
+def _language(context: ContextTypes.DEFAULT_TYPE) -> str:
+    language = context.user_data.get("language", "en")
+    return language if language in HELP_TEXTS else "en"
+
+
 def _menu(context: ContextTypes.DEFAULT_TYPE) -> ReplyKeyboardMarkup:
     labels = LANGUAGES.get(context.user_data.get("language", "en"), LANGUAGES["en"])
     return ReplyKeyboardMarkup(
