@@ -63,4 +63,12 @@ def test_search_filters_long_and_unknown_duration_results() -> None:
     with patch("music_bot.downloader.yt_dlp.YoutubeDL") as youtube_dl:
         youtube_dl.return_value.__enter__.return_value.extract_info.return_value = fake_info
         results = search_tracks("test")
-    assert [result.title for result in results] == ["Short"]
+    assert [result.title for result in results] == ["Unknown", "Short"]
+
+
+def test_search_builds_video_url_from_flat_result_id() -> None:
+    fake_info = {"entries": [{"id": "abc123", "title": "Short", "duration": 120}]}
+    with patch("music_bot.downloader.yt_dlp.YoutubeDL") as youtube_dl:
+        youtube_dl.return_value.__enter__.return_value.extract_info.return_value = fake_info
+        result = search_tracks("test")[0]
+    assert result.url == "https://www.youtube.com/watch?v=abc123"

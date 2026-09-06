@@ -67,6 +67,7 @@ def search_tracks(
             "no_warnings": True,
             "noplaylist": True,
             "ignoreerrors": True,
+            "extract_flat": True,
             "logger": _QuietYtdlpLogger(),
         }
         if cookies_file:
@@ -78,19 +79,25 @@ def search_tracks(
 
     results: list[SearchResult] = []
     for entry in info.get("entries", []) if info else []:
-        if not entry or not entry.get("webpage_url"):
+        if not entry:
+            continue
+        video_id = entry.get("id")
+        result_url = entry.get("webpage_url") or entry.get("url")
+        if not result_url and video_id:
+            result_url = f"https://www.youtube.com/watch?v={video_id}"
+        if not result_url:
             continue
         duration = int(entry.get("duration") or 0)
-        if duration > min(max_duration, MAX_SEARCH_DURATION_SECONDS) or not duration:
+        if duration > min(max_duration, MAX_SEARCH_DURATION_SECONDS):
             continue
         results.append(
             SearchResult(
-                url=str(entry["webpage_url"]),
+                url=str(result_url),
                 title=str(entry.get("title") or "Unknown title"),
                 artist=str(entry.get("artist") or entry.get("uploader") or "Unknown artist"),
                 duration=duration,
                 thumbnail=entry.get("thumbnail"),
-                source=str(urlparse(str(entry["webpage_url"])).hostname or "Audio source"),
+                source=str(urlparse(str(result_url)).hostname or "Audio source"),
             )
         )
     if not results:

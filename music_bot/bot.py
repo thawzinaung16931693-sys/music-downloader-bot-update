@@ -101,6 +101,8 @@ def create_application(config: Config) -> Application:
                 max_duration=min(config.max_duration_seconds, 900),
                 cookies_file=config.cookies_file,
             )
+            if not results:
+                raise DownloadError("No results under 15 minutes were found. Try another keyword.")
             context.user_data["search_results"] = results
             context.user_data["search_owner"] = update.effective_user.id if update.effective_user else None
             first = results[0] if results else None

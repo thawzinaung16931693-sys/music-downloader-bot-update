@@ -71,9 +71,10 @@ provider supplies them, and downloaded MP3 files include available title, artist
 album, and cover-art metadata.
 
 Search uses YouTube's yt-dlp search backend, and search quality depends on the query
-and available public results. Results longer than `MAX_DURATION_SECONDS` or without
-known duration are hidden from search. Search and URL downloads use the same
-duration and file-size limits. The default maximum is 15 minutes.
+and available public results. Results longer than `MAX_DURATION_SECONDS` are hidden
+from search. Search and URL downloads use the same duration and file-size limits.
+The default maximum is 15 minutes. A provider may omit duration metadata; such a
+result is allowed into the list and is checked again before download.
 
 ## Tests
 
