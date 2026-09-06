@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass
 
 from dotenv import load_dotenv
@@ -25,13 +26,21 @@ class Config:
         ]
         if missing:
             raise ValueError(f"Missing required environment variables: {', '.join(missing)}")
+        bot_token = os.environ["TELEGRAM_BOT_TOKEN"].strip()
+        if (
+            bot_token == "123456789:your_bot_token"
+            or not re.fullmatch(r"\d{8,12}:[A-Za-z0-9_-]{30,}", bot_token)
+        ):
+            raise ValueError(
+                "TELEGRAM_BOT_TOKEN is missing or invalid. Create a token with @BotFather."
+            )
 
         quality = _bounded_int("AUDIO_QUALITY", 320, 64, 320)
         if quality not in {128, 192, 256, 320}:
             raise ValueError("AUDIO_QUALITY must be one of: 128, 192, 256, 320")
 
         return cls(
-            bot_token=os.environ["TELEGRAM_BOT_TOKEN"],
+            bot_token=bot_token,
             audio_quality=quality,
             max_duration_seconds=_bounded_int("MAX_DURATION_SECONDS", 900, 1, 86_400),
             max_file_size_mb=_bounded_int("MAX_FILE_SIZE_MB", 49, 1, 2_000),
