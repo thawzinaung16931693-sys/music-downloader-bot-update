@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from html import escape
 import logging
 import tempfile
 from pathlib import Path
@@ -21,13 +22,17 @@ from .downloader import DownloadError, SearchResult, download_track, extract_url
 
 LOGGER = logging.getLogger(__name__)
 HELP_TEXT = (
-    "Send a public music link or a keyword search. I will show results for you to choose.\n\n"
-    "Commands:\n"
-    "/search artist and title\n"
-    "/title song title\n"
-    "/artist artist name\n\n"
-    "You can also send plain text such as: Daft Punk One More Time\n\n"
-    "Only download audio you have permission to use."
+    "🎵 <b>Music Finder</b>\n"
+    "━━━━━━━━━━━━━━━━━━\n"
+    "Find a track and download it as a high-quality MP3.\n\n"
+    "🔎 <b>Search commands</b>\n"
+    "• /search artist and title\n"
+    "• /title song title\n"
+    "• /artist artist name\n\n"
+    "💬 Or send plain text, for example:\n"
+    "<code>Daft Punk One More Time</code>\n\n"
+    "🔗 Public SoundCloud, YouTube, Bandcamp, and other supported links also work.\n\n"
+    "⚖️ Download only audio you have permission to use."
 )
 SEARCH_PAGE_SIZE = 5
 BOT_COMMANDS = [
@@ -54,7 +59,7 @@ def create_application(config: Config) -> Application:
 
     async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if update.message:
-            await update.message.reply_text(HELP_TEXT, disable_web_page_preview=True)
+            await update.message.reply_text(HELP_TEXT, parse_mode="HTML", disable_web_page_preview=True)
 
     async def show_search_results(
         update: Update, context: ContextTypes.DEFAULT_TYPE, query: str, field: str
@@ -62,17 +67,20 @@ def create_application(config: Config) -> Application:
         message = update.message
         if not message:
             return
-        status = await message.reply_text(f"Searching for {query.strip()}...")
+        status = await message.reply_text(
+            f"🔎 <b>Searching</b>\n<code>{escape(query.strip())}</code>\n\n⏳ Finding the best matches...",
+            parse_mode="HTML",
+        )
         try:
             results = await asyncio.to_thread(search_tracks, query, field=field)
             context.user_data["search_results"] = results
             context.user_data["search_owner"] = update.effective_user.id if update.effective_user else None
             await _show_search_page(status, context, 0)
         except DownloadError as exc:
-            await status.edit_text(str(exc))
+            await status.edit_text(f"⚠️ {escape(str(exc))}", parse_mode="HTML")
         except Exception:
             LOGGER.exception("Unexpected failure while searching for %s", query)
-            await status.edit_text("An unexpected error occurred while searching.")
+            await status.edit_text("❌ An unexpected error occurred while searching.")
 
     async def search_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         message = update.message
@@ -109,7 +117,10 @@ def create_application(config: Config) -> Application:
         except (ValueError, KeyError, IndexError, TypeError):
             await query.edit_message_text("Those search results have expired. Please search again.")
             return
-        await query.edit_message_text(f"Downloading: {result.artist} - {result.title}")
+        await query.edit_message_text(
+            f"⬇️ <b>Preparing download</b>\n{escape(result.artist)} - {escape(result.title)}",
+            parse_mode="HTML",
+        )
         await download_url(update, context, result.url, reply_to=query.message.message_id)
 
     async def next_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -135,7 +146,9 @@ def create_application(config: Config) -> Application:
         message = update.effective_message
         if not message:
             return
-        status = await message.reply_text("Processing your link...")
+        status = await message.reply_text(
+            "🔗 <b>Processing your link</b>\n⏳ Extracting audio...", parse_mode="HTML"
+        )
         try:
             async with semaphore:
                 with tempfile.TemporaryDirectory(prefix="music-bot-") as temp_dir:
@@ -144,7 +157,7 @@ def create_application(config: Config) -> Application:
                         max_duration=config.max_duration_seconds,
                         max_file_size_mb=config.max_file_size_mb, cookies_file=config.cookies_file,
                     )
-                    await status.edit_text("Uploading MP3...")
+                    await status.edit_text("✅ <b>Track ready</b>\n⬆️ Uploading MP3...", parse_mode="HTML")
                     await message.chat.send_action(ChatAction.UPLOAD_DOCUMENT)
                     with track.path.open("rb") as audio_file:
                         await message.reply_audio(
@@ -154,10 +167,10 @@ def create_application(config: Config) -> Application:
                         )
             await status.delete()
         except DownloadError as exc:
-            await status.edit_text(str(exc))
+            await status.edit_text(f"⚠️ {escape(str(exc))}", parse_mode="HTML")
         except Exception:
             LOGGER.exception("Unexpected failure while downloading %s", url)
-            await status.edit_text("An unexpected error occurred while downloading.")
+            await status.edit_text("❌ An unexpected error occurred while downloading.")
 
     application.add_handler(CommandHandler(["start", "help"], help_handler))
     application.add_handler(CommandHandler("search", search_command))
@@ -173,7 +186,7 @@ async def _show_search_page(message, context: ContextTypes.DEFAULT_TYPE, page: i
     start = page * SEARCH_PAGE_SIZE
     page_results = results[start : start + SEARCH_PAGE_SIZE]
     if not page_results:
-        await message.edit_text("There are no more results. Choose a track from the previous page.")
+        await message.edit_text("⚠️ There are no more results. Choose a track from the previous page.")
         return
     keyboard = [
         [InlineKeyboardButton(_result_label(start + index, result), callback_data=f"pick:{start + index}")]
@@ -181,20 +194,22 @@ async def _show_search_page(message, context: ContextTypes.DEFAULT_TYPE, page: i
     ]
     navigation = []
     if page > 0:
-        navigation.append(InlineKeyboardButton("Previous", callback_data=f"next:{page - 1}"))
+        navigation.append(InlineKeyboardButton("⬅️ Previous", callback_data=f"next:{page - 1}"))
     if start + SEARCH_PAGE_SIZE < len(results):
-        navigation.append(InlineKeyboardButton("Next", callback_data=f"next:{page + 1}"))
+        navigation.append(InlineKeyboardButton("Next ➡️", callback_data=f"next:{page + 1}"))
     if navigation:
         keyboard.append(navigation)
     await message.edit_text(
-        f"Choose a track to download (page {page + 1}):",
+        f"🎧 <b>Choose a track</b>\nPage {page + 1} of {(len(results) + SEARCH_PAGE_SIZE - 1) // SEARCH_PAGE_SIZE}\n\nTap a result to download:",
         reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="HTML",
     )
 
 
 def _result_label(index: int, result: SearchResult) -> str:
     duration = f" [{result.duration // 60}:{result.duration % 60:02d}]" if result.duration else ""
-    return f"{index + 1}. {result.artist} - {result.title}"[:58] + duration
+    label = f"🎵 {index + 1}. {result.artist} - {result.title}"
+    return label[:58] + duration
 
 
 def main() -> None:
