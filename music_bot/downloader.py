@@ -161,6 +161,8 @@ def download_track(
         "max_filesize": max_file_size_mb * 1024 * 1024,
         "socket_timeout": 30,
         "retries": 3,
+        "extractor_args": {"youtube": {"player_client": ["android"]}},
+        "logger": _QuietYtdlpLogger(),
         "writethumbnail": True,
         "progress_hooks": [progress_callback] if progress_callback else [],
         "postprocessors": [
