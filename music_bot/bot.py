@@ -135,6 +135,8 @@ def main() -> None:
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
     config = Config.from_env()
     LOGGER.info("Starting Telegram Bot API music bot")
     create_application(config).run_polling(allowed_updates=Update.ALL_TYPES)
