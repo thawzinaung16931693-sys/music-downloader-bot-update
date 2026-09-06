@@ -15,6 +15,7 @@ import yt_dlp
 SPOTIFY_HOSTS = {"open.spotify.com"}
 URL_PATTERN = re.compile(r"https?://[^\s<>]+", re.IGNORECASE)
 MAX_SEARCH_DURATION_SECONDS = 15 * 60
+MAX_SEARCH_RESULTS = 100
 
 
 class DownloadError(Exception):
@@ -46,7 +47,7 @@ def build_search_url(query: str, *, field: str = "search") -> str:
         raise DownloadError(f"Please provide a {field} to search for.")
     if len(query) > 200:
         raise DownloadError("Search text must be 200 characters or fewer.")
-    return f"ytsearch20:{query} audio"
+    return f"ytsearch{MAX_SEARCH_RESULTS}:{query} audio"
 
 
 def search_tracks(

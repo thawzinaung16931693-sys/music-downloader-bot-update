@@ -192,6 +192,11 @@ def create_application(config: Config) -> Application:
         await query.edit_message_text(f"✅ Language: {LANGUAGES[language]['name']}")
         await query.message.reply_text("🔎 Send a song, artist, or music link.", reply_markup=_menu(context))
 
+    async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+        LOGGER.error("Unhandled Telegram update error", exc_info=context.error)
+        if isinstance(update, Update) and update.effective_message:
+            await update.effective_message.reply_text("❌ Something went wrong. Please try again.")
+
     async def download_url(
         update: Update,
         context: ContextTypes.DEFAULT_TYPE,
@@ -258,6 +263,7 @@ def create_application(config: Config) -> Application:
     application.add_handler(CallbackQueryHandler(next_handler, pattern=r"^next:\d+$"))
     application.add_handler(CallbackQueryHandler(language_callback, pattern=r"^lang:(en|my|zh)$"))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
+    application.add_error_handler(error_handler)
     return application
 
 

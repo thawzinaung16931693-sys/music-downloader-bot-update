@@ -44,7 +44,7 @@ def test_spotify_playlist_is_rejected_without_network_request() -> None:
 
 def test_build_search_url_normalizes_query() -> None:
     assert build_search_url("  Daft   Punk   One More Time ") == (
-        "ytsearch20:Daft Punk One More Time audio"
+        "ytsearch100:Daft Punk One More Time audio"
     )
 
 

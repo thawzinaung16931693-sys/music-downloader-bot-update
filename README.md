@@ -58,9 +58,10 @@ The bot can search for several results and lets you choose which one to download
 /artist Daft Punk
 ```
 
-The bot displays five numbered inline buttons at a time. Use `Next` and `Previous`
-to browse more results, then click one to download that specific result. Plain text
-without a URL is treated as a general keyword search.
+The bot searches up to 100 provider results and displays five numbered inline
+buttons at a time. Use `Next` and `Previous` to browse all eligible results, then
+click one to download that specific result. Plain text without a URL is treated as
+a general keyword search.
 The same commands are registered in Telegram's command menu, available from the
 slash button in the chat.
 
