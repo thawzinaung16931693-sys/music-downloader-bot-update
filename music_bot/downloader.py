@@ -8,6 +8,7 @@ from pathlib import Path
 from urllib.parse import quote, urlparse
 from urllib.request import Request, urlopen
 import json
+from collections.abc import Callable
 
 import yt_dlp
 
@@ -34,6 +35,8 @@ class SearchResult:
     title: str
     artist: str
     duration: int
+    thumbnail: str | None = None
+    source: str = "YouTube"
 
 
 def build_search_url(query: str, *, field: str = "search") -> str:
@@ -63,6 +66,8 @@ def search_tracks(query: str, *, field: str = "search") -> list[SearchResult]:
                 title=str(entry.get("title") or "Unknown title"),
                 artist=str(entry.get("artist") or entry.get("uploader") or "Unknown artist"),
                 duration=int(entry.get("duration") or 0),
+                thumbnail=entry.get("thumbnail"),
+                source=str(urlparse(str(entry["webpage_url"])).hostname or "Audio source"),
             )
         )
     if not results:
@@ -99,6 +104,7 @@ def download_track(
     max_duration: int,
     max_file_size_mb: int,
     cookies_file: str | None = None,
+    progress_callback: Callable[[dict[str, object]], None] | None = None,
 ) -> DownloadedTrack:
     if not url.startswith("ytsearch"):
         validate_public_url(url)
@@ -114,6 +120,8 @@ def download_track(
         "max_filesize": max_file_size_mb * 1024 * 1024,
         "socket_timeout": 30,
         "retries": 3,
+        "writethumbnail": True,
+        "progress_hooks": [progress_callback] if progress_callback else [],
         "postprocessors": [
             {
                 "key": "FFmpegExtractAudio",
@@ -121,6 +129,7 @@ def download_track(
                 "preferredquality": str(quality),
             },
             {"key": "FFmpegMetadata", "add_metadata": True},
+            {"key": "EmbedThumbnail"},
         ],
     }
     if cookies_file:

@@ -64,6 +64,11 @@ without a URL is treated as a general keyword search.
 The same commands are registered in Telegram's command menu, available from the
 slash button in the chat.
 
+Use `/language` or the persistent `🌐 Language` button to switch the interface
+between English, Burmese, and Chinese. Search results include thumbnails when the
+provider supplies them, and downloaded MP3 files include available title, artist,
+album, and cover-art metadata.
+
 Search uses YouTube's yt-dlp search backend, and search quality depends on the query
 and available public results. Search and URL downloads use the same duration and
 file-size limits.

@@ -6,7 +6,7 @@ import logging
 import tempfile
 from pathlib import Path
 
-from telegram import BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, Update
 from telegram.constants import ChatAction
 from telegram.ext import (
     Application,
@@ -34,13 +34,24 @@ HELP_TEXT = (
     "🔗 Public SoundCloud, YouTube, Bandcamp, and other supported links also work.\n\n"
     "⚖️ Download only audio you have permission to use."
 )
+HELP_TEXTS = {
+    "en": HELP_TEXT,
+    "my": "🎵 <b>Music Finder</b>\n━━━━━━━━━━━━━━━━━━\nသီချင်းအမည်၊ အဆိုတော် သို့မဟုတ် လင့်ခ် ပို့ပြီး MP3 ရယူပါ။\n\n🔎 /search အဆိုတော်နှင့် သီချင်းအမည်\n🎵 /title သီချင်းအမည်\n👤 /artist အဆိုတော်အမည်\n\n⚖️ ခွင့်ပြုချက်ရှိသော အသံဖိုင်များကိုသာ ဒေါင်းလုပ်လုပ်ပါ။",
+    "zh": "🎵 <b>Music Finder</b>\n━━━━━━━━━━━━━━━━━━\n发送歌曲名、歌手名或音乐链接，下载高质量 MP3。\n\n🔎 /search 歌手和歌曲名\n🎵 /title 歌曲名\n👤 /artist 歌手名\n\n⚖️ 请只下载您有权使用的音频。",
+}
 SEARCH_PAGE_SIZE = 5
+LANGUAGES = {
+    "en": {"name": "English", "search": "Search", "help": "Help", "language": "Language"},
+    "my": {"name": "မြန်မာ", "search": "ရှာဖွေရန်", "help": "အကူအညီ", "language": "ဘာသာစကား"},
+    "zh": {"name": "中文", "search": "搜索音乐", "help": "帮助", "language": "语言"},
+}
 BOT_COMMANDS = [
     BotCommand("start", "Start the music bot"),
     BotCommand("help", "Show help and usage"),
     BotCommand("search", "Search by artist and title"),
     BotCommand("title", "Search by song title"),
     BotCommand("artist", "Search by artist name"),
+    BotCommand("language", "Choose interface language"),
 ]
 
 
@@ -59,7 +70,18 @@ def create_application(config: Config) -> Application:
 
     async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if update.message:
-            await update.message.reply_text(HELP_TEXT, parse_mode="HTML", disable_web_page_preview=True)
+            await update.message.reply_text(HELP_TEXTS[_language(context)], parse_mode="HTML", disable_web_page_preview=True, reply_markup=_menu(context))
+
+    async def language_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        if update.message:
+            await update.message.reply_text(
+                "🌐 Choose your language / ဘာသာစကား / 语言:",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🇬🇧 English", callback_data="lang:en")],
+                    [InlineKeyboardButton("🇲🇲 မြန်မာ", callback_data="lang:my")],
+                    [InlineKeyboardButton("🇨🇳 中文", callback_data="lang:zh")],
+                ]),
+            )
 
     async def show_search_results(
         update: Update, context: ContextTypes.DEFAULT_TYPE, query: str, field: str
@@ -75,7 +97,13 @@ def create_application(config: Config) -> Application:
             results = await asyncio.to_thread(search_tracks, query, field=field)
             context.user_data["search_results"] = results
             context.user_data["search_owner"] = update.effective_user.id if update.effective_user else None
-            await _show_search_page(status, context, 0)
+            first = results[0] if results else None
+            if first and first.thumbnail:
+                await status.delete()
+                preview = await message.reply_photo(first.thumbnail)
+                await _show_search_page(preview, context, 0)
+            else:
+                await _show_search_page(status, context, 0)
         except DownloadError as exc:
             await status.edit_text(f"⚠️ {escape(str(exc))}", parse_mode="HTML")
         except Exception:
@@ -97,6 +125,15 @@ def create_application(config: Config) -> Application:
         message = update.message
         if not message or not message.text:
             return
+        if message.text in {value["help"] for value in LANGUAGES.values()} | {f"❓ {value['help']}" for value in LANGUAGES.values()}:
+            await help_handler(update, context)
+            return
+        if message.text in {value["language"] for value in LANGUAGES.values()} | {f"🌐 {value['language']}" for value in LANGUAGES.values()}:
+            await language_handler(update, context)
+            return
+        if message.text in {value["search"] for value in LANGUAGES.values()} | {f"🔎 {value['search']}" for value in LANGUAGES.values()}:
+            await message.reply_text("🔎 Send a song, artist, or music link.", reply_markup=_menu(context))
+            return
         url = extract_url(message.text)
         if url:
             await download_url(update, context, url)
@@ -117,10 +154,16 @@ def create_application(config: Config) -> Application:
         except (ValueError, KeyError, IndexError, TypeError):
             await query.edit_message_text("Those search results have expired. Please search again.")
             return
-        await query.edit_message_text(
-            f"⬇️ <b>Preparing download</b>\n{escape(result.artist)} - {escape(result.title)}",
-            parse_mode="HTML",
-        )
+        if query.message.photo:
+            await query.edit_message_caption(
+                caption=f"⬇️ <b>Preparing download</b>\n{escape(result.artist)} - {escape(result.title)}",
+                parse_mode="HTML",
+            )
+        else:
+            await query.edit_message_text(
+                f"⬇️ <b>Preparing download</b>\n{escape(result.artist)} - {escape(result.title)}",
+                parse_mode="HTML",
+            )
         await download_url(update, context, result.url, reply_to=query.message.message_id)
 
     async def next_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -137,6 +180,16 @@ def create_application(config: Config) -> Application:
         except (ValueError, KeyError, TypeError):
             await query.answer("Those search results have expired.", show_alert=True)
 
+    async def language_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        query = update.callback_query
+        if not query:
+            return
+        language = (query.data or "").split(":", 1)[1]
+        context.user_data["language"] = language
+        await query.answer()
+        await query.edit_message_text(f"✅ Language: {LANGUAGES[language]['name']}")
+        await query.message.reply_text("🔎 Send a song, artist, or music link.", reply_markup=_menu(context))
+
     async def download_url(
         update: Update,
         context: ContextTypes.DEFAULT_TYPE,
@@ -152,11 +205,34 @@ def create_application(config: Config) -> Application:
         try:
             async with semaphore:
                 with tempfile.TemporaryDirectory(prefix="music-bot-") as temp_dir:
-                    track = await asyncio.to_thread(
+                    progress = {"percent": -1}
+
+                    def progress_hook(data: dict[str, object]) -> None:
+                        if data.get("status") == "downloading":
+                            raw = str(data.get("_percent_str", "0")).strip("% ")
+                            try:
+                                progress["percent"] = int(float(raw))
+                            except ValueError:
+                                pass
+
+                    download_task = asyncio.create_task(asyncio.to_thread(
                         download_track, url, Path(temp_dir), quality=config.audio_quality,
                         max_duration=config.max_duration_seconds,
                         max_file_size_mb=config.max_file_size_mb, cookies_file=config.cookies_file,
-                    )
+                        progress_callback=progress_hook,
+                    ))
+                    last_percent = -1
+                    while not download_task.done():
+                        await asyncio.sleep(2)
+                        percent = progress["percent"]
+                        if percent >= 0 and percent != last_percent:
+                            last_percent = percent
+                            blocks = percent // 10
+                            await status.edit_text(
+                                f"⬇️ <b>Downloading</b>\n{'█' * blocks}{'░' * (10 - blocks)} {percent}%",
+                                parse_mode="HTML",
+                            )
+                    track = await download_task
                     await status.edit_text("✅ <b>Track ready</b>\n⬆️ Uploading MP3...", parse_mode="HTML")
                     await message.chat.send_action(ChatAction.UPLOAD_DOCUMENT)
                     with track.path.open("rb") as audio_file:
@@ -173,10 +249,12 @@ def create_application(config: Config) -> Application:
             await status.edit_text("❌ An unexpected error occurred while downloading.")
 
     application.add_handler(CommandHandler(["start", "help"], help_handler))
+    application.add_handler(CommandHandler("language", language_handler))
     application.add_handler(CommandHandler("search", search_command))
     application.add_handler(CommandHandler(["title", "artist"], field_command))
     application.add_handler(CallbackQueryHandler(pick_handler, pattern=r"^pick:\d+$"))
     application.add_handler(CallbackQueryHandler(next_handler, pattern=r"^next:\d+$"))
+    application.add_handler(CallbackQueryHandler(language_callback, pattern=r"^lang:(en|my|zh)$"))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
     return application
 
@@ -186,7 +264,7 @@ async def _show_search_page(message, context: ContextTypes.DEFAULT_TYPE, page: i
     start = page * SEARCH_PAGE_SIZE
     page_results = results[start : start + SEARCH_PAGE_SIZE]
     if not page_results:
-        await message.edit_text("⚠️ There are no more results. Choose a track from the previous page.")
+        await _edit_result_message(message, "⚠️ There are no more results. Choose a track from the previous page.", None)
         return
     keyboard = [
         [InlineKeyboardButton(_result_label(start + index, result), callback_data=f"pick:{start + index}")]
@@ -199,17 +277,33 @@ async def _show_search_page(message, context: ContextTypes.DEFAULT_TYPE, page: i
         navigation.append(InlineKeyboardButton("Next ➡️", callback_data=f"next:{page + 1}"))
     if navigation:
         keyboard.append(navigation)
-    await message.edit_text(
-        f"🎧 <b>Choose a track</b>\nPage {page + 1} of {(len(results) + SEARCH_PAGE_SIZE - 1) // SEARCH_PAGE_SIZE}\n\nTap a result to download:",
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode="HTML",
+    await _edit_result_message(
+        message,
+        f"🎧 <b>Choose a track</b>\nPage {page + 1} of {(len(results) + SEARCH_PAGE_SIZE - 1) // SEARCH_PAGE_SIZE}\n\nTap a result to download:\n<i>🎵 title  •  👤 artist  •  ⏱ duration  •  🌐 source</i>",
+        InlineKeyboardMarkup(keyboard),
     )
+
+
+async def _edit_result_message(message, text: str, markup: InlineKeyboardMarkup | None) -> None:
+    if message.photo:
+        await message.edit_caption(caption=text, reply_markup=markup, parse_mode="HTML")
+    else:
+        await message.edit_text(text, reply_markup=markup, parse_mode="HTML")
 
 
 def _result_label(index: int, result: SearchResult) -> str:
     duration = f" [{result.duration // 60}:{result.duration % 60:02d}]" if result.duration else ""
-    label = f"🎵 {index + 1}. {result.artist} - {result.title}"
+    label = f"🎵 {index + 1}. {result.artist} - {result.title} · {result.source}"
     return label[:58] + duration
+
+
+def _menu(context: ContextTypes.DEFAULT_TYPE) -> ReplyKeyboardMarkup:
+    labels = LANGUAGES.get(context.user_data.get("language", "en"), LANGUAGES["en"])
+    return ReplyKeyboardMarkup(
+        [[f"🔎 {labels['search']}", f"❓ {labels['help']}"], [f"🌐 {labels['language']}"],],
+        resize_keyboard=True,
+        is_persistent=True,
+    )
 
 
 def main() -> None:
