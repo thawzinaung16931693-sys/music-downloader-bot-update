@@ -117,3 +117,11 @@ def test_bandcamp_adapter_accepts_track_and_rejects_album() -> None:
     validate_bandcamp_track_url("https://artist.bandcamp.com/track/example")
     with pytest.raises(DownloadError, match="one Bandcamp track"):
         validate_bandcamp_track_url("https://artist.bandcamp.com/album/example")
+
+
+def test_audius_adapter_accepts_track_and_rejects_profile() -> None:
+    from music_bot.providers.audius import validate_audius_track_url
+
+    validate_audius_track_url("https://audius.co/artist/track-name")
+    with pytest.raises(DownloadError, match="one Audius track"):
+        validate_audius_track_url("https://audius.co/artist")

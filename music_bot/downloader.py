@@ -218,6 +218,8 @@ def download_track(
         validate_public_url(url)
     from .providers.bandcamp import validate_bandcamp_track_url
     validate_bandcamp_track_url(url)
+    from .providers.audius import validate_audius_track_url
+    validate_audius_track_url(url)
     target = _spotify_search(url, cookies_file) if _is_spotify_url(url) else url
     output_template = str(output_dir / "%(title).180B-%(id)s.%(ext)s")
     options: dict[str, object] = {

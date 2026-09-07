@@ -140,6 +140,10 @@ such as `https://artist.bandcamp.com/track/name`; album and artist pages are rej
 because this bot downloads one track per request. The artist or label must have
 enabled the download, and the source license must permit your use.
 
+Audius public track URLs use the same direct-link flow. Artist/profile pages are
+rejected; send a single track URL and use only tracks the uploader permits you to
+download.
+
 ## Universal downloader fallback
 
 The optional MIT-licensed project
