@@ -157,3 +157,11 @@ def test_archive_adapter_accepts_item_and_rejects_search() -> None:
     validate_archive_audio_url("https://archive.org/details/example-audio")
     with pytest.raises(DownloadError, match="one Internet Archive audio"):
         validate_archive_audio_url("https://archive.org/search.php?query=music")
+
+
+def test_ccmixter_adapter_accepts_track_and_rejects_catalog() -> None:
+    from music_bot.providers.ccmixter import validate_ccmixter_track_url
+
+    validate_ccmixter_track_url("https://ccmixter.org/files/artist/12345")
+    with pytest.raises(DownloadError, match="one ccMixter track"):
+        validate_ccmixter_track_url("https://ccmixter.org/search")

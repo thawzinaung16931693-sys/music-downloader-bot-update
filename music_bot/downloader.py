@@ -228,6 +228,8 @@ def download_track(
     validate_fma_track_url(url)
     from .providers.archive import validate_archive_audio_url
     validate_archive_audio_url(url)
+    from .providers.ccmixter import validate_ccmixter_track_url
+    validate_ccmixter_track_url(url)
     target = _spotify_search(url, cookies_file) if _is_spotify_url(url) else url
     output_template = str(output_dir / "%(title).180B-%(id)s.%(ext)s")
     options: dict[str, object] = {

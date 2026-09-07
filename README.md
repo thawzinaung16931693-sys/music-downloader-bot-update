@@ -159,6 +159,10 @@ Internet Archive audio item and file URLs are validated as public audio links. U
 only public-domain or otherwise authorized recordings and verify the item's license
 before downloading or performing it.
 
+ccMixter public track pages are validated as single-track links. Confirm the
+Creative Commons license and attribution requirements before downloading or using
+the track.
+
 ## Universal downloader fallback
 
 The optional MIT-licensed project
