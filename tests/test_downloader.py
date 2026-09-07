@@ -149,3 +149,11 @@ def test_fma_adapter_accepts_track_and_rejects_catalog() -> None:
     validate_fma_track_url("https://freemusicarchive.org/music/Artist/Track/")
     with pytest.raises(DownloadError, match="one Free Music Archive track"):
         validate_fma_track_url("https://freemusicarchive.org/search")
+
+
+def test_archive_adapter_accepts_item_and_rejects_search() -> None:
+    from music_bot.providers.archive import validate_archive_audio_url
+
+    validate_archive_audio_url("https://archive.org/details/example-audio")
+    with pytest.raises(DownloadError, match="one Internet Archive audio"):
+        validate_archive_audio_url("https://archive.org/search.php?query=music")

@@ -155,6 +155,10 @@ Free Music Archive track URLs are validated as single-track links. Verify the
 track's specific license before using it in a DJ set, public performance, remix, or
 commercial project.
 
+Internet Archive audio item and file URLs are validated as public audio links. Use
+only public-domain or otherwise authorized recordings and verify the item's license
+before downloading or performing it.
+
 ## Universal downloader fallback
 
 The optional MIT-licensed project
