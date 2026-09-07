@@ -114,6 +114,8 @@ result is allowed into the list and is checked again before download.
 Results are ranked for exact artist/title relevance and DJ-friendly versions before
 pagination, with official videos, live recordings, shorts, covers, and weak matches
 ranked lower.
+Duplicate uploads are removed while distinct versions such as extended mixes,
+remixes, instrumentals, acapellas, and live versions remain available.
 
 ## Tests
 

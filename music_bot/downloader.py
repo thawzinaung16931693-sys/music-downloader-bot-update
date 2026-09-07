@@ -109,7 +109,33 @@ def search_tracks(
 def rank_search_results(results: list[SearchResult], query: str) -> list[SearchResult]:
     """Rank provider results for accurate, DJ-oriented search ordering."""
     tokens = _search_tokens(query)
-    return sorted(results, key=lambda result: _result_score(result, tokens), reverse=True)
+    ranked = sorted(results, key=lambda result: _result_score(result, tokens), reverse=True)
+    return remove_duplicate_results(ranked)
+
+
+def remove_duplicate_results(results: list[SearchResult]) -> list[SearchResult]:
+    """Remove duplicate uploads while preserving distinct mixes and live versions."""
+    unique: list[SearchResult] = []
+    seen: set[tuple[str, str, str]] = set()
+    for result in results:
+        key = _duplicate_key(result)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(result)
+    return unique
+
+
+def _duplicate_key(result: SearchResult) -> tuple[str, str, str]:
+    title = re.sub(r"\([^)]*\)|\[[^]]*\]", " ", result.title.casefold())
+    title = re.sub(r"\b(official|audio|video|hd|hq|lyrics?|visualizer|4k)\b", " ", title)
+    version = ""
+    for tag in ("extended mix", "club mix", "original mix", "remix", "instrumental", "acapella", "live"):
+        if tag in result.title.casefold():
+            version = tag
+            break
+    normalize = lambda value: re.sub(r"[^a-z0-9]+", "", value.casefold())
+    return normalize(result.artist), normalize(title), version
 
 
 def _search_tokens(query: str) -> set[str]:

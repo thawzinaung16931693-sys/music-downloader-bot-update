@@ -9,6 +9,7 @@ from music_bot.downloader import (
     validate_public_url,
     search_tracks,
     rank_search_results,
+    remove_duplicate_results,
 )
 from unittest.mock import patch
 
@@ -84,3 +85,15 @@ def test_rank_search_results_prefers_exact_audio_result() -> None:
         SearchResult("other", "One More Time", "Someone Else", 200),
     ]
     assert rank_search_results(results, "Daft Punk One More Time")[0].url == "audio"
+
+
+def test_duplicate_detection_preserves_distinct_versions() -> None:
+    from music_bot.downloader import SearchResult
+
+    results = [
+        SearchResult("one", "Artist - Track (Official Audio)", "Artist", 200),
+        SearchResult("two", "Artist - Track [HD Video]", "Artist", 200),
+        SearchResult("three", "Artist - Track (Extended Mix)", "Artist", 400),
+    ]
+    unique = remove_duplicate_results(results)
+    assert [result.url for result in unique] == ["one", "three"]
