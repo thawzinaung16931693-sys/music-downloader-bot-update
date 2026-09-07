@@ -73,3 +73,15 @@ def _intent_from_values(query: str, values: dict[str, object]) -> SearchIntent:
     values = {key: value for key, value in values.items() if key in allowed_keys and value is not None}
     values["max_duration"] = min(int(values.get("max_duration", 900)), 900)
     return SearchIntent(raw_query=query, **values)
+
+
+def provider_query(intent: SearchIntent) -> str:
+    """Turn parsed DJ intent into a provider-friendly search query."""
+    parts = [intent.artist, intent.title, intent.genre, intent.mood]
+    if intent.min_bpm is not None:
+        bpm = str(int(intent.min_bpm))
+        parts.append(f"{bpm} bpm" if intent.max_bpm is None else f"{bpm}-{int(intent.max_bpm)} bpm")
+    if intent.instrumental:
+        parts.append("instrumental")
+    query = " ".join(part for part in parts if part)
+    return query or intent.raw_query

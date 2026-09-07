@@ -23,6 +23,8 @@ Phase 1 is developed on the `phase1-dj-ai` branch and is pushed to a separate
 repository. It adds an optional OpenAI-compatible DJ query parser with a local
 fallback, FFprobe technical audio analysis, and Mutagen metadata enrichment. The
 bot reports codec, bitrate, duration, and source-quality notes with each download.
+Parsed artist, title, genre, mood, BPM, and instrumental filters are converted into
+the provider search query.
 AI configuration is optional and is documented in `.env.example`.
 
 ## Requirements

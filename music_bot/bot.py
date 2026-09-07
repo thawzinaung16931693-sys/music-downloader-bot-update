@@ -18,7 +18,7 @@ from telegram.ext import (
 )
 
 from .config import Config
-from .ai_parser import AIParser
+from .ai_parser import AIParser, provider_query
 from .audio_analysis import analyze_audio
 from .downloader import DownloadError, SearchResult, download_track, extract_url, search_tracks
 from .metadata import enrich_metadata
@@ -101,7 +101,7 @@ def create_application(config: Config) -> Application:
             intent = await asyncio.to_thread(ai_parser.parse, query)
             results = await asyncio.to_thread(
                 search_tracks,
-                intent.raw_query,
+                provider_query(intent),
                 field=field,
                 max_duration=min(config.max_duration_seconds, 900),
                 cookies_file=config.cookies_file,
