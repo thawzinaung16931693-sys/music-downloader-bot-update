@@ -6,6 +6,8 @@ from pathlib import Path
 
 from .dj_models import AudioAnalysis
 
+ANALYSIS_WINDOW_SECONDS = 60
+
 
 def analyze_audio(path: Path) -> AudioAnalysis:
     """Read technical audio data with FFprobe."""
@@ -38,7 +40,9 @@ def _analyze_music(path: Path) -> tuple[float | None, float | None, str | None, 
     """Estimate tempo and key when optional librosa is installed."""
     try:
         import librosa
-        y, sample_rate = librosa.load(path, sr=22_050, mono=True, duration=900)
+        y, sample_rate = librosa.load(
+            path, sr=22_050, mono=True, duration=ANALYSIS_WINDOW_SECONDS
+        )
         tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sample_rate)
         chroma = librosa.feature.chroma_cqt(y=y, sr=sample_rate)
         pitch_class, mode, key_confidence = _estimate_key(chroma.mean(axis=1))

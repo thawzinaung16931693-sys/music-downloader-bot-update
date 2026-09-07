@@ -34,8 +34,10 @@ SoundCloud, and Bandcamp candidates. The optional `spotdl` and `bandcamp-dl` too
 are represented as provider adapters for future use; yt-dlp is the active downloader.
 Normal searches do not call the AI backend. AI searches call the configured AI
 endpoint first, then build the DJ source plan. BPM and musical-key analysis is
-local audio analysis, not an AI guess; values are marked unknown when confidence
-or source data is insufficient.
+local audio analysis, not an AI guess. The analyzer inspects up to the first 60
+seconds of a track, which gives tempo and key detection enough musical context
+without making every download unnecessarily slow. Values are marked unknown when
+confidence or source data is insufficient.
 
 ## Requirements
 
