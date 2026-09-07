@@ -135,6 +135,11 @@ YouTube and SoundCloud are searchable by keyword, direct-URL sources can be used
 sending their public track URL, and metadata-only services are clearly labelled and
 cannot be selected as download sources.
 
+Bandcamp direct links now use a provider adapter. Send a single public track URL
+such as `https://artist.bandcamp.com/track/name`; album and artist pages are rejected
+because this bot downloads one track per request. The artist or label must have
+enabled the download, and the source license must permit your use.
+
 ## Universal downloader fallback
 
 The optional MIT-licensed project

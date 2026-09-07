@@ -109,3 +109,11 @@ def test_soundcloud_search_uses_soundcloud_extractor() -> None:
         search_tracks("house", source="soundcloud")
         options = youtube_dl.call_args.args[0]
         assert options["noplaylist"] is True
+
+
+def test_bandcamp_adapter_accepts_track_and_rejects_album() -> None:
+    from music_bot.providers.bandcamp import validate_bandcamp_track_url
+
+    validate_bandcamp_track_url("https://artist.bandcamp.com/track/example")
+    with pytest.raises(DownloadError, match="one Bandcamp track"):
+        validate_bandcamp_track_url("https://artist.bandcamp.com/album/example")
