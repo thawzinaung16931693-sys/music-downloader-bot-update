@@ -25,6 +25,7 @@ from .metadata import enrich_metadata
 from .exports import metadata_record, write_metadata_exports
 from .source_catalog import SOURCE_CATALOG, source_definition
 from .preferences import Preferences
+from .provider_capabilities import detect_provider
 from .ui import emoji
 
 LOGGER = logging.getLogger(__name__)
@@ -410,6 +411,15 @@ def create_application(config: Config) -> Application:
     ) -> None:
         message = update.effective_message
         if not message:
+            return
+        provider = detect_provider(url)
+        if provider and provider.metadata_only:
+            await message.reply_text(
+                f"ℹ️ {provider.label} provides metadata only. Send a public audio link from a permitted source."
+            )
+            return
+        if provider and not provider.direct_download:
+            await message.reply_text(f"⚠️ Direct downloads are not enabled for {provider.label}.")
             return
         status = await message.reply_text(
             f"{emoji('download')} <b>Processing your link</b>\n⏳ Extracting audio...", parse_mode="HTML"

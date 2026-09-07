@@ -134,6 +134,9 @@ The filter panel lists all of these categories so users can see what is supporte
 YouTube and SoundCloud are searchable by keyword, direct-URL sources can be used by
 sending their public track URL, and metadata-only services are clearly labelled and
 cannot be selected as download sources.
+Direct links are checked against the provider capability registry before download.
+Spotify, Apple Music, Deezer, Tidal, Beatport, and Traxsource links are reported as
+metadata-only instead of being sent to a downloader.
 
 Bandcamp direct links now use a provider adapter. Send a single public track URL
 such as `https://artist.bandcamp.com/track/name`; album and artist pages are rejected
