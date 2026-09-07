@@ -25,7 +25,9 @@ fallback, FFprobe technical audio analysis, and Mutagen metadata enrichment. The
 bot reports codec, bitrate, duration, BPM, musical key, Camelot key, and
 source-quality notes with each download.
 Parsed artist, title, genre, mood, BPM, and instrumental filters are converted into
-the provider search query.
+the provider search query while original user keywords are always preserved. For
+example, `Popular Myanmar House Remix` is not changed into an English-house
+recommendation.
 AI configuration is optional and is documented in `.env.example`.
 
 `/search` performs a normal YouTube keyword search. `/aisearch` performs an

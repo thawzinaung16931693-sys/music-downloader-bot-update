@@ -49,9 +49,15 @@ class AIParser:
                 "temperature": 0,
                 "response_format": {"type": "json_object"},
                 "messages": [{"role": "user", "content": (
-                    "Extract DJ music search filters as JSON. Keys: artist, title, genre, mood, "
-                    "min_bpm, max_bpm, max_duration, instrumental. Use null when absent. "
-                    f"Query: {query}"
+                    "You are a strict music search parser, not a recommender. Extract only facts "
+                    "explicitly present in the user's query. Never translate, replace, broaden, "
+                    "or invent a language, country, artist, title, genre, mood, or version. "
+                    "Preserve terms such as Myanmar, Burmese, popular, house, remix, live, "
+                    "instrumental, and extended mix. Return JSON only with keys artist, title, "
+                    "genre, mood, min_bpm, max_bpm, max_duration, instrumental, keywords. "
+                    "Put important original terms that do not fit another field in keywords. "
+                    "Use null or [] when absent. Original user query: "
+                    f"{query}"
                 )}],
             },
             timeout=self.timeout,
@@ -87,14 +93,13 @@ def _intent_from_values(query: str, values: dict[str, object]) -> SearchIntent:
 
 def provider_query(intent: SearchIntent) -> str:
     """Turn parsed DJ intent into a provider-friendly search query."""
-    parts = [intent.artist, intent.title, intent.genre, intent.mood]
+    parts = [intent.artist, intent.title, intent.genre, intent.mood, intent.raw_query]
     if intent.min_bpm is not None:
         bpm = str(int(intent.min_bpm))
         parts.append(f"{bpm} bpm" if intent.max_bpm is None else f"{bpm}-{int(intent.max_bpm)} bpm")
     if intent.instrumental:
         parts.append("instrumental")
-    query = " ".join(part for part in parts if part)
-    return query or intent.raw_query
+    return " ".join(part for part in parts if part)
 
 
 def dj_source_plan(intent: SearchIntent) -> list[str]:

@@ -19,4 +19,9 @@ def test_parser_falls_back_without_ai_credentials() -> None:
 
 def test_provider_query_uses_dj_filters() -> None:
     intent = parse_locally("instrumental piano 128 bpm")
-    assert provider_query(intent) == "128 bpm instrumental"
+    assert "instrumental piano 128 bpm" in provider_query(intent)
+
+
+def test_provider_query_preserves_original_user_keywords() -> None:
+    intent = parse_locally("Popular Myanmar House Remix")
+    assert "Popular Myanmar House Remix" in provider_query(intent)
