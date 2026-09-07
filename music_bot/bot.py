@@ -105,7 +105,10 @@ def create_application(config: Config) -> Application:
             parse_mode="HTML",
         )
         try:
-            intent = await asyncio.to_thread(ai_parser.parse, query) if use_ai else None
+            parsed = await asyncio.to_thread(ai_parser.parse, query) if use_ai else None
+            intent = parsed.intent if parsed else None
+            if use_ai and parsed and not parsed.used_ai:
+                await status.edit_text("⚠️ AI search is temporarily unavailable. Using local DJ search instead...")
             results = await asyncio.to_thread(
                 search_tracks,
                 provider_query(intent) if intent else query,

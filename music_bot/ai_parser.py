@@ -10,6 +10,12 @@ import httpx
 from .dj_models import SearchIntent
 
 
+class ParseResult:
+    def __init__(self, intent: SearchIntent, used_ai: bool):
+        self.intent = intent
+        self.used_ai = used_ai
+
+
 class AIParser:
     """Parse DJ search language with an optional OpenAI-compatible endpoint."""
 
@@ -18,16 +24,16 @@ class AIParser:
         self.api_key = api_key or os.getenv("AI_API_KEY")
         self.model = model or os.getenv("AI_MODEL", "gpt-4o-mini")
 
-    def parse(self, query: str) -> SearchIntent:
+    def parse(self, query: str) -> ParseResult:
         query = " ".join(query.split()).strip()
         if not query or len(query) > 200:
             raise ValueError("Search text must contain between 1 and 200 characters.")
         if self.endpoint and self.api_key:
             try:
-                return self._parse_remote(query)
+                return ParseResult(self._parse_remote(query), True)
             except (httpx.HTTPError, KeyError, TypeError, ValueError, json.JSONDecodeError):
                 pass
-        return parse_locally(query)
+        return ParseResult(parse_locally(query), False)
 
     def _parse_remote(self, query: str) -> SearchIntent:
         endpoint = urljoin(self.endpoint.rstrip("/") + "/", "chat/completions")

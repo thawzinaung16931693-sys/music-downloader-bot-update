@@ -10,9 +10,10 @@ def test_local_dj_query_parsing() -> None:
 
 def test_parser_falls_back_without_ai_credentials() -> None:
     intent = AIParser(endpoint=None, api_key=None).parse("instrumental piano 128 bpm")
-    assert intent.instrumental is True
-    assert intent.min_bpm == 128
-    assert intent.max_bpm == 128
+    assert intent.used_ai is False
+    assert intent.intent.instrumental is True
+    assert intent.intent.min_bpm == 128
+    assert intent.intent.max_bpm == 128
 
 
 def test_provider_query_uses_dj_filters() -> None:
