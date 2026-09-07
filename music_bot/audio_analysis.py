@@ -44,7 +44,8 @@ def _analyze_music(path: Path) -> tuple[float | None, str | None, str | None]:
         key = ("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")[pitch_class]
         musical_key = f"{key} {'minor' if mode == 'minor' else 'major'}"
         camelot = _camelot_key(pitch_class, mode)
-        return float(tempo[0] if hasattr(tempo, "__len__") else tempo), musical_key, camelot
+        bpm = float(tempo[0] if hasattr(tempo, "__len__") else tempo)
+        return (bpm if bpm > 0 else None), musical_key, camelot
     except (ImportError, OSError, ValueError, RuntimeError):
         return None, None, None
 

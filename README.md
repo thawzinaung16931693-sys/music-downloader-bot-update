@@ -32,6 +32,10 @@ AI configuration is optional and is documented in `.env.example`.
 AI-assisted DJ search and uses the Open Claw-style source plan for yt-dlp,
 SoundCloud, and Bandcamp candidates. The optional `spotdl` and `bandcamp-dl` tools
 are represented as provider adapters for future use; yt-dlp is the active downloader.
+Normal searches do not call the AI backend. AI searches call the configured AI
+endpoint first, then build the DJ source plan. BPM and musical-key analysis is
+local audio analysis, not an AI guess; values are marked unknown when confidence
+or source data is insufficient.
 
 ## Requirements
 
