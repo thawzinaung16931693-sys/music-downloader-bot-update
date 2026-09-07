@@ -156,13 +156,6 @@ The fallback is not used for Spotify URLs. Spotify Premium credentials do not
 provide a legitimate MP3 download endpoint, so Spotify remains metadata/matching
 only. The fallback must only be used for audio the user is authorized to download.
 
-## Download queue
-
-Downloads run through background workers so multiple requests are not lost. Use
-`/queue` to see waiting jobs and `/cancel` or `/clear` to remove your waiting jobs.
-An active download is not interrupted by `/clear` and remains subject to the normal
-duration and file-size limits.
-
 Downloads include a quality score, source codec/bitrate, warnings for low-quality
 audio, and a warning when a high-bitrate MP3 may be an upscaled source.
 Each completed download also sends track-named `.json` and `.csv` files with

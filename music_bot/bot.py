@@ -24,7 +24,6 @@ from .downloader import DownloadError, SearchResult, download_track, extract_url
 from .metadata import enrich_metadata
 from .exports import metadata_record, write_metadata_exports
 from .source_catalog import SOURCE_CATALOG, source_definition
-from .queue import DownloadQueue, QueueJob
 
 LOGGER = logging.getLogger(__name__)
 HELP_TEXT = (
@@ -34,7 +33,6 @@ HELP_TEXT = (
     "🔎 <b>Search commands</b>\n"
     "• /search artist and title (normal YouTube search)\n"
     "• /aisearch DJ filters (AI-assisted search)\n"
-    "• /queue, /cancel, /clear (manage downloads)\n"
     "• /title song title\n"
     "• /artist artist name\n\n"
     "💬 Or send plain text, for example:\n"
@@ -78,21 +76,10 @@ def create_application(config: Config) -> Application:
     )
     semaphore = asyncio.Semaphore(config.download_workers)
     ai_parser = AIParser()
-    download_queue: DownloadQueue | None = None
 
     async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if update.message:
             await update.message.reply_text(HELP_TEXTS[_language(context)], parse_mode="HTML", disable_web_page_preview=True, reply_markup=_menu(context))
-
-    async def queue_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        if update.message and download_queue:
-            count = download_queue.pending_count(update.effective_user.id if update.effective_user else None)
-            await update.message.reply_text(f"📋 <b>Your queue</b>\n{count} download(s) waiting.", parse_mode="HTML", reply_markup=_menu(context))
-
-    async def clear_queue_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        if update.message and download_queue and update.effective_user:
-            removed = download_queue.remove_user(update.effective_user.id)
-            await update.message.reply_text(f"🗑️ Removed {removed} waiting download(s). The active download, if any, is unchanged.", reply_markup=_menu(context))
 
     async def menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if update.message:
@@ -378,20 +365,9 @@ def create_application(config: Config) -> Application:
         message = update.effective_message
         if not message:
             return
-        status = await message.reply_text("⏳ Adding download to the queue...", reply_markup=_menu(context))
-        if not download_queue:
-            await status.edit_text("❌ Download queue is not ready. Please try again.")
-            return
-        user_id = update.effective_user.id if update.effective_user else 0
-        position = await download_queue.enqueue(QueueJob(user_id, update, url, reply_to, status))
-        await status.edit_text(f"📋 <b>Queued</b>\nPosition: {position}\n\nUse /queue to check your waiting downloads.", parse_mode="HTML")
-
-    async def process_download(job: QueueJob) -> None:
-        update, url, status = job.update, job.url, job.status
-        message = update.effective_message
-        if not message:
-            return
-        await status.edit_text("🔗 <b>Processing your link</b>\n⏳ Extracting audio...", parse_mode="HTML")
+        status = await message.reply_text(
+            "🔗 <b>Processing your link</b>\n⏳ Extracting audio...", parse_mode="HTML"
+        )
         try:
             async with semaphore:
                 with tempfile.TemporaryDirectory(prefix="music-bot-") as temp_dir:
@@ -457,18 +433,7 @@ def create_application(config: Config) -> Application:
             LOGGER.exception("Unexpected failure while downloading %s", url)
             await status.edit_text("❌ An unexpected error occurred while downloading.")
 
-    async def start_queue(application: Application) -> None:
-        nonlocal download_queue
-        download_queue = DownloadQueue(process_download, config.download_workers)
-        await download_queue.start()
-
-    async def initialize_application(application: Application) -> None:
-        await configure_command_menu(application)
-        await start_queue(application)
-
     application.add_handler(CommandHandler(["start", "help"], help_handler))
-    application.add_handler(CommandHandler("queue", queue_handler))
-    application.add_handler(CommandHandler(["cancel", "clear"], clear_queue_handler))
     application.add_handler(CommandHandler("language", language_handler))
     application.add_handler(CommandHandler("menu", menu_handler))
     application.add_handler(CommandHandler("search", search_command))
@@ -483,7 +448,6 @@ def create_application(config: Config) -> Application:
     application.add_handler(CallbackQueryHandler(genre_handler, pattern=r"^genre:(D&B|House|Vinahouse|Bounce|Dubstep|SpeedHouse|Custom)$"))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
     application.add_error_handler(error_handler)
-    application.post_init = initialize_application
     return application
 
 
