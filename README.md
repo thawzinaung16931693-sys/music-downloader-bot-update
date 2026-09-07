@@ -148,6 +148,9 @@ HearThis.at track URLs are also validated as single-track direct links. Profile,
 search, charts, and discovery pages are rejected; the uploader must permit the
 download.
 
+Jamendo public track URLs are validated as single-track links. Check the track's
+Creative Commons or other license before downloading or using it in a DJ set.
+
 ## Universal downloader fallback
 
 The optional MIT-licensed project

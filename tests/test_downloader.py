@@ -133,3 +133,11 @@ def test_hearthis_adapter_accepts_track_and_rejects_discovery() -> None:
     validate_hearthis_track_url("https://hearthis.at/dj/track-name/")
     with pytest.raises(DownloadError, match="one HearThis.at track"):
         validate_hearthis_track_url("https://hearthis.at/discover/")
+
+
+def test_jamendo_adapter_accepts_track_and_rejects_catalog() -> None:
+    from music_bot.providers.jamendo import validate_jamendo_track_url
+
+    validate_jamendo_track_url("https://www.jamendo.com/track/123/name")
+    with pytest.raises(DownloadError, match="one Jamendo track"):
+        validate_jamendo_track_url("https://www.jamendo.com/artists/")
