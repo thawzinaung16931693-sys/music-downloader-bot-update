@@ -27,6 +27,10 @@ def enrich_metadata(path: Path, analysis: AudioAnalysis, *, title: str, artist: 
             tags.add(COMM(encoding=3, lang="eng", desc="DJ Analysis", text=analysis.quality_note))
         if analysis.camelot_key:
             tags.add(TXXX(encoding=3, desc="DJ_CAMELOT", text=analysis.camelot_key))
+        if analysis.bpm_confidence is not None:
+            tags.add(TXXX(encoding=3, desc="DJ_BPM_CONFIDENCE", text=f"{analysis.bpm_confidence:.3f}"))
+        if analysis.key_confidence is not None:
+            tags.add(TXXX(encoding=3, desc="DJ_KEY_CONFIDENCE", text=f"{analysis.key_confidence:.3f}"))
         tags.save(path, v2_version=3)
     except (ImportError, OSError):
         pass

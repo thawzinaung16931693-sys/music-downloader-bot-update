@@ -23,34 +23,36 @@ def analyze_audio(path: Path) -> AudioAnalysis:
     bitrate_raw = audio.get("bit_rate") or fmt.get("bit_rate")
     bitrate = int(bitrate_raw) // 1000 if bitrate_raw else None
     sample_rate = int(audio["sample_rate"]) if audio.get("sample_rate") else None
-    bpm, musical_key, camelot_key = _analyze_music(path)
+    bpm, bpm_confidence, musical_key, key_confidence, camelot_key = _analyze_music(path)
     warnings = (f"Source bitrate is only {bitrate} kbps.",) if bitrate and bitrate < 256 else ()
     note = "Source quality appears suitable for DJ use." if not warnings else "Quality may be lower than requested."
     return AudioAnalysis(
         duration, bitrate, sample_rate, audio.get("codec_name"),
-        bpm=bpm, musical_key=musical_key, camelot_key=camelot_key,
+        bpm=bpm, bpm_confidence=bpm_confidence, musical_key=musical_key,
+        key_confidence=key_confidence, camelot_key=camelot_key,
         quality_note=note, warnings=warnings,
     )
 
 
-def _analyze_music(path: Path) -> tuple[float | None, str | None, str | None]:
+def _analyze_music(path: Path) -> tuple[float | None, float | None, str | None, float | None, str | None]:
     """Estimate tempo and key when optional librosa is installed."""
     try:
         import librosa
         y, sample_rate = librosa.load(path, sr=22_050, mono=True, duration=900)
-        tempo, _ = librosa.beat.beat_track(y=y, sr=sample_rate)
+        tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sample_rate)
         chroma = librosa.feature.chroma_cqt(y=y, sr=sample_rate)
-        pitch_class, mode = _estimate_key(chroma.mean(axis=1))
+        pitch_class, mode, key_confidence = _estimate_key(chroma.mean(axis=1))
         key = ("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")[pitch_class]
         musical_key = f"{key} {'minor' if mode == 'minor' else 'major'}"
         camelot = _camelot_key(pitch_class, mode)
         bpm = float(tempo[0] if hasattr(tempo, "__len__") else tempo)
-        return (bpm if bpm > 0 else None), musical_key, camelot
+        bpm_confidence = _bpm_confidence(beat_frames, len(y), sample_rate)
+        return (bpm if bpm > 0 else None), bpm_confidence, musical_key, key_confidence, camelot
     except (ImportError, OSError, ValueError, RuntimeError):
-        return None, None, None
+        return None, None, None, None, None
 
 
-def _estimate_key(profile) -> tuple[int, str]:
+def _estimate_key(profile) -> tuple[int, str, float]:
     import numpy as np
 
     major = np.array([6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88])
@@ -59,8 +61,17 @@ def _estimate_key(profile) -> tuple[int, str]:
     for pitch_class in range(12):
         candidates.append((float(np.corrcoef(profile, np.roll(major, pitch_class))[0, 1]), pitch_class, "major"))
         candidates.append((float(np.corrcoef(profile, np.roll(minor, pitch_class))[0, 1]), pitch_class, "minor"))
-    _, pitch_class, mode = max(candidates)
-    return pitch_class, mode
+    best = max(candidates)
+    confidence = max(0.0, min(1.0, (best[0] + 1) / 2))
+    return best[1], best[2], confidence
+
+
+def _bpm_confidence(beat_frames, sample_count: int, sample_rate: int) -> float:
+    if len(beat_frames) < 4 or sample_count / sample_rate < 10:
+        return 0.0
+    intervals = beat_frames[1:] - beat_frames[:-1]
+    variation = float(intervals.std() / intervals.mean()) if intervals.mean() else 1.0
+    return max(0.0, min(1.0, 1.0 - variation))
 
 
 def _camelot_key(pitch_class: int, mode: str) -> str:

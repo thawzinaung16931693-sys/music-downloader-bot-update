@@ -23,7 +23,9 @@ class AudioAnalysis:
     sample_rate: int | None
     codec: str | None
     bpm: float | None = None
+    bpm_confidence: float | None = None
     musical_key: str | None = None
+    key_confidence: float | None = None
     camelot_key: str | None = None
     energy: float | None = None
     danceability: float | None = None

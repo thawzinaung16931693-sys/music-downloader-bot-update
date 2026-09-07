@@ -286,14 +286,7 @@ def create_application(config: Config) -> Application:
                         await message.reply_audio(
                             audio=audio_file, title=track.title, performer=track.artist,
                             duration=track.duration or None,
-                            caption=(
-                                f"🎵 {track.artist} - {track.title}\n"
-                                f"💿 {analysis.codec or '?'} • {analysis.bitrate or '?'} kbps • "
-                                f"⏱ {int(analysis.duration // 60)}:{int(analysis.duration % 60):02d}\n"
-                                f"🥁 BPM: {analysis.bpm or 'unknown'} • 🎼 Key: {analysis.musical_key or 'unknown'} • "
-                                f"🎚️ Camelot: {analysis.camelot_key or 'unknown'}\n"
-                                f"🎧 {analysis.quality_note or 'Quality checked'}"
-                            ),
+                            caption=_analysis_caption(track.artist, track.title, analysis),
                         )
             await status.delete()
         except DownloadError as exc:
@@ -352,6 +345,20 @@ def _result_label(index: int, result: SearchResult) -> str:
     duration = f" [{result.duration // 60}:{result.duration % 60:02d}]" if result.duration else ""
     label = f"🎵 {index + 1}. {result.artist} - {result.title} · {result.source}"
     return label[:58] + duration
+
+
+def _analysis_caption(artist: str, title: str, analysis) -> str:
+    confidence = ""
+    if analysis.bpm_confidence is not None and analysis.key_confidence is not None:
+        confidence = f"🎯 Confidence: BPM {analysis.bpm_confidence:.0%} • Key {analysis.key_confidence:.0%}\n"
+    return (
+        f"🎵 {artist} - {title}\n"
+        f"💿 {analysis.codec or '?'} • {analysis.bitrate or '?'} kbps • "
+        f"⏱ {int(analysis.duration // 60)}:{int(analysis.duration % 60):02d}\n"
+        f"🥁 BPM: {analysis.bpm or 'unknown'} • 🎼 Key: {analysis.musical_key or 'unknown'} • "
+        f"🎚️ Camelot: {analysis.camelot_key or 'unknown'}\n"
+        f"{confidence}🎧 {analysis.quality_note or 'Quality checked'}"
+    )
 
 
 def _language(context: ContextTypes.DEFAULT_TYPE) -> str:
