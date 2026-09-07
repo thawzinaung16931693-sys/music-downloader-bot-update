@@ -124,6 +124,11 @@ def create_application(config: Config) -> Application:
             if not results:
                 raise DownloadError("No results under 15 minutes were found. Try another keyword.")
             context.user_data["search_results"] = results
+            context.user_data["search_query"] = query
+            context.user_data["search_field"] = field
+            context.user_data["search_use_ai"] = use_ai
+            context.user_data["search_source"] = "youtube"
+            context.user_data["search_genre"] = None
             context.user_data["search_owner"] = update.effective_user.id if update.effective_user else None
             first = results[0] if results else None
             if first and first.thumbnail:
@@ -137,6 +142,42 @@ def create_application(config: Config) -> Application:
         except Exception:
             LOGGER.exception("Unexpected failure while searching for %s", query)
             await status.edit_text("❌ An unexpected error occurred while searching.")
+
+    async def run_filtered_search(
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE,
+        *,
+        source: str | None = None,
+        genre: str | None = None,
+    ) -> None:
+        message = update.effective_message
+        if not message:
+            return
+        base_query = context.user_data.get("search_query", "")
+        query = " ".join(part for part in (base_query, genre) if part)
+        selected_source = source or context.user_data.get("search_source", "youtube")
+        status = await message.reply_text(f"🔎 Searching {selected_source} for {escape(query)}...")
+        try:
+            search_query = query
+            if context.user_data.get("search_use_ai"):
+                intent_result = await asyncio.to_thread(ai_parser.parse, query)
+                search_query = provider_query(intent_result.intent)
+            results = await asyncio.to_thread(
+                search_tracks,
+                search_query,
+                field="search",
+                max_duration=min(config.max_duration_seconds, 900),
+                cookies_file=config.cookies_file,
+                source=selected_source,
+            )
+            context.user_data["search_results"] = results
+            context.user_data["search_source"] = selected_source
+            context.user_data["search_query"] = query
+            if genre is not None:
+                context.user_data["search_genre"] = genre
+            await _show_search_page(status, context, 0)
+        except DownloadError as exc:
+            await status.edit_text(f"⚠️ {escape(str(exc))}")
 
     async def search_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         message = update.message
@@ -159,6 +200,9 @@ def create_application(config: Config) -> Application:
     async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         message = update.message
         if not message or not message.text:
+            return
+        if context.user_data.pop("custom_genre_mode", False):
+            await run_filtered_search(update, context, genre=message.text.strip())
             return
         if message.text in {value["help"] for value in LANGUAGES.values()} | {f"❓ {value['help']}" for value in LANGUAGES.values()}:
             await help_handler(update, context)
@@ -231,6 +275,60 @@ def create_application(config: Config) -> Application:
         await query.answer()
         await query.edit_message_text(f"✅ Language: {LANGUAGES[language]['name']}")
         await query.message.reply_text("🔎 Send a song, artist, or music link.", reply_markup=_menu(context))
+
+    async def filter_panel_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        query = update.callback_query
+        if not query or query.from_user.id != context.user_data.get("search_owner"):
+            return
+        await query.answer()
+        await query.edit_message_reply_markup(reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("🌐 Source", callback_data="filter:source")],
+            [InlineKeyboardButton("🎚️ Genre", callback_data="filter:genre")],
+            [InlineKeyboardButton("↩️ Back to results", callback_data="filter:back")],
+        ]))
+
+    async def filter_choice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        query = update.callback_query
+        if not query or query.from_user.id != context.user_data.get("search_owner"):
+            return
+        choice = (query.data or "").split(":", 1)[1]
+        await query.answer()
+        if choice == "source":
+            await query.edit_message_reply_markup(reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("▶️ YouTube", callback_data="source:youtube")],
+                [InlineKeyboardButton("☁️ SoundCloud", callback_data="source:soundcloud")],
+                [InlineKeyboardButton("↩️ Back", callback_data="filter:panel")],
+            ]))
+        elif choice == "genre":
+            genres = ["D&B", "House", "Vinahouse", "Bounce", "Dubstep", "SpeedHouse", "Custom"]
+            await query.edit_message_reply_markup(reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton(f"🎵 {genre}", callback_data=f"genre:{genre}")]
+                for genre in genres
+            ] + [[InlineKeyboardButton("↩️ Back", callback_data="filter:panel")]]))
+        elif choice == "panel":
+            await filter_panel_handler(update, context)
+        elif choice == "back":
+            await _show_search_page(query.message, context, 0)
+
+    async def source_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        query = update.callback_query
+        if not query or query.from_user.id != context.user_data.get("search_owner"):
+            return
+        source = (query.data or "").split(":", 1)[1]
+        await query.answer()
+        await run_filtered_search(update, context, source=source)
+
+    async def genre_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        query = update.callback_query
+        if not query or query.from_user.id != context.user_data.get("search_owner"):
+            return
+        genre = (query.data or "").split(":", 1)[1]
+        await query.answer()
+        if genre == "Custom":
+            context.user_data["custom_genre_mode"] = True
+            await query.edit_message_text("🎚️ Send your custom genre, for example: liquid drum and bass")
+            return
+        await run_filtered_search(update, context, genre=genre)
 
     async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
         LOGGER.error("Unhandled Telegram update error", exc_info=context.error)
@@ -323,6 +421,10 @@ def create_application(config: Config) -> Application:
     application.add_handler(CallbackQueryHandler(pick_handler, pattern=r"^pick:\d+$"))
     application.add_handler(CallbackQueryHandler(next_handler, pattern=r"^next:\d+$"))
     application.add_handler(CallbackQueryHandler(language_callback, pattern=r"^lang:(en|my|zh)$"))
+    application.add_handler(CallbackQueryHandler(filter_panel_handler, pattern=r"^filters$"))
+    application.add_handler(CallbackQueryHandler(filter_choice_handler, pattern=r"^filter:(source|genre|panel|back)$"))
+    application.add_handler(CallbackQueryHandler(source_handler, pattern=r"^source:(youtube|soundcloud)$"))
+    application.add_handler(CallbackQueryHandler(genre_handler, pattern=r"^genre:(D&B|House|Vinahouse|Bounce|Dubstep|SpeedHouse|Custom)$"))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
     application.add_error_handler(error_handler)
     return application
@@ -346,6 +448,7 @@ async def _show_search_page(message, context: ContextTypes.DEFAULT_TYPE, page: i
         navigation.append(InlineKeyboardButton("Next ➡️", callback_data=f"next:{page + 1}"))
     if navigation:
         keyboard.append(navigation)
+    keyboard.append([InlineKeyboardButton("⚙️ Filters", callback_data="filters")])
     await _edit_result_message(
         message,
         f"🎧 <b>Choose a track</b>\nPage {page + 1} of {(len(results) + SEARCH_PAGE_SIZE - 1) // SEARCH_PAGE_SIZE}\n\nTap a result to download:\n<i>🎵 title  •  👤 artist  •  ⏱ duration  •  🌐 source</i>",

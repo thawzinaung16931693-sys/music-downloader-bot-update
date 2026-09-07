@@ -118,6 +118,10 @@ pagination, with official videos, live recordings, shorts, covers, and weak matc
 ranked lower.
 Duplicate uploads are removed while distinct versions such as extended mixes,
 remixes, instrumentals, acapellas, and live versions remain available.
+Every result page includes `⚙️ Filters`. Choose a source (`▶️ YouTube` or
+`☁️ SoundCloud`) and a genre (`D&B`, `House`, `Vinahouse`, `Bounce`, `Dubstep`,
+`SpeedHouse`, or `Custom`). A custom genre is entered as the next message and is
+used to run the search again. Filters are applied before ranking and pagination.
 
 Downloads include a quality score, source codec/bitrate, warnings for low-quality
 audio, and a warning when a high-bitrate MP3 may be an upscaled source.

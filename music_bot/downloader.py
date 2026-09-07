@@ -60,8 +60,13 @@ def search_tracks(
     field: str = "search",
     max_duration: int = MAX_SEARCH_DURATION_SECONDS,
     cookies_file: str | None = None,
+    source: str = "youtube",
 ) -> list[SearchResult]:
     search_url = build_search_url(query, field=field)
+    if source == "soundcloud":
+        search_url = f"scsearch{MAX_SEARCH_RESULTS}:{query}"
+    elif source != "youtube":
+        raise DownloadError("That search source is not supported yet.")
     try:
         options: dict[str, object] = {
             "quiet": True,

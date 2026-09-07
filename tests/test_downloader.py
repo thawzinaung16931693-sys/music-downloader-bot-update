@@ -97,3 +97,15 @@ def test_duplicate_detection_preserves_distinct_versions() -> None:
     ]
     unique = remove_duplicate_results(results)
     assert [result.url for result in unique] == ["one", "three"]
+
+
+def test_soundcloud_search_uses_soundcloud_extractor() -> None:
+    with patch("music_bot.downloader.yt_dlp.YoutubeDL") as youtube_dl:
+        youtube_dl.return_value.__enter__.return_value.extract_info.return_value = {
+            "entries": [{"id": "sc1", "title": "House Track", "duration": 180}]
+        }
+        from music_bot.downloader import search_tracks
+
+        search_tracks("house", source="soundcloud")
+        options = youtube_dl.call_args.args[0]
+        assert options["noplaylist"] is True
