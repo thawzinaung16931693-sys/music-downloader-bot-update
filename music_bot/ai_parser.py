@@ -85,3 +85,9 @@ def provider_query(intent: SearchIntent) -> str:
         parts.append("instrumental")
     query = " ".join(part for part in parts if part)
     return query or intent.raw_query
+
+
+def dj_source_plan(intent: SearchIntent) -> list[str]:
+    """Build permitted DJ source candidates for the AI-assisted search flow."""
+    query = provider_query(intent)
+    return [f"ytsearch100:{query} audio", f"scsearch:{query}", f"bcsearch:{query}"]

@@ -13,19 +13,21 @@ def enrich_metadata(path: Path, analysis: AudioAnalysis, *, title: str, artist: 
             tags = ID3(path)
         except ID3NoHeaderError:
             tags = ID3()
-        tags[TIT2] = TIT2(encoding=3, text=title)
-        tags[TPE1] = TPE1(encoding=3, text=artist)
+        for frame_id in ("TIT2", "TPE1", "TALB", "TBPM", "TKEY", "COMM:DJ Analysis:eng", "TXXX:DJ_CAMELOT"):
+            tags.delall(frame_id)
+        tags.add(TIT2(encoding=3, text=title))
+        tags.add(TPE1(encoding=3, text=artist))
         if album:
-            tags[TALB] = TALB(encoding=3, text=album)
+            tags.add(TALB(encoding=3, text=album))
         if analysis.bpm:
-            tags[TBPM] = TBPM(encoding=3, text=str(round(analysis.bpm, 2)))
+            tags.add(TBPM(encoding=3, text=str(round(analysis.bpm, 2))))
         if analysis.musical_key:
-            tags[TKEY] = TKEY(encoding=3, text=analysis.musical_key)
+            tags.add(TKEY(encoding=3, text=analysis.musical_key))
         if analysis.quality_note:
-            tags[COMM] = COMM(encoding=3, lang="eng", desc="", text=analysis.quality_note)
+            tags.add(COMM(encoding=3, lang="eng", desc="DJ Analysis", text=analysis.quality_note))
         if analysis.camelot_key:
-            tags[TXXX] = TXXX(encoding=3, desc="DJ_CAMELOT", text=analysis.camelot_key)
-        tags.save(path)
+            tags.add(TXXX(encoding=3, desc="DJ_CAMELOT", text=analysis.camelot_key))
+        tags.save(path, v2_version=3)
     except (ImportError, OSError):
         pass
     return EnrichedMetadata(title, artist, album, bpm=analysis.bpm, musical_key=analysis.musical_key, camelot_key=analysis.camelot_key)

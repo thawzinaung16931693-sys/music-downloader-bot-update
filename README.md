@@ -22,10 +22,16 @@ can change when sites update their APIs or anti-bot systems.
 Phase 1 is developed on the `phase1-dj-ai` branch and is pushed to a separate
 repository. It adds an optional OpenAI-compatible DJ query parser with a local
 fallback, FFprobe technical audio analysis, and Mutagen metadata enrichment. The
-bot reports codec, bitrate, duration, and source-quality notes with each download.
+bot reports codec, bitrate, duration, BPM, musical key, Camelot key, and
+source-quality notes with each download.
 Parsed artist, title, genre, mood, BPM, and instrumental filters are converted into
 the provider search query.
 AI configuration is optional and is documented in `.env.example`.
+
+`/search` performs a normal YouTube keyword search. `/aisearch` performs an
+AI-assisted DJ search and uses the Open Claw-style source plan for yt-dlp,
+SoundCloud, and Bandcamp candidates. The optional `spotdl` and `bandcamp-dl` tools
+are represented as provider adapters for future use; yt-dlp is the active downloader.
 
 ## Requirements
 
@@ -66,6 +72,13 @@ The bot can search for several results and lets you choose which one to download
 /search Daft Punk One More Time
 /title One More Time
 /artist Daft Punk
+```
+
+Use `/search` for a normal YouTube keyword search. Use `/aisearch` for AI-assisted
+DJ sourcing, for example:
+
+```text
+/aisearch energetic afro house between 120-124 bpm under 10 minutes
 ```
 
 The bot searches up to 100 provider results and displays five numbered inline

@@ -29,7 +29,8 @@ HELP_TEXT = (
     "━━━━━━━━━━━━━━━━━━\n"
     "Find a track and download it as a high-quality MP3.\n\n"
     "🔎 <b>Search commands</b>\n"
-    "• /search artist and title\n"
+    "• /search artist and title (normal YouTube search)\n"
+    "• /aisearch DJ filters (AI-assisted search)\n"
     "• /title song title\n"
     "• /artist artist name\n\n"
     "💬 Or send plain text, for example:\n"
@@ -52,6 +53,7 @@ BOT_COMMANDS = [
     BotCommand("start", "Start the music bot"),
     BotCommand("help", "Show help and usage"),
     BotCommand("search", "Search by artist and title"),
+    BotCommand("aisearch", "AI-assisted DJ source search"),
     BotCommand("title", "Search by song title"),
     BotCommand("artist", "Search by artist name"),
     BotCommand("language", "Choose interface language"),
@@ -88,7 +90,7 @@ def create_application(config: Config) -> Application:
             )
 
     async def show_search_results(
-        update: Update, context: ContextTypes.DEFAULT_TYPE, query: str, field: str
+        update: Update, context: ContextTypes.DEFAULT_TYPE, query: str, field: str, use_ai: bool = False
     ) -> None:
         message = update.message
         if not message:
@@ -98,10 +100,10 @@ def create_application(config: Config) -> Application:
             parse_mode="HTML",
         )
         try:
-            intent = await asyncio.to_thread(ai_parser.parse, query)
+            intent = await asyncio.to_thread(ai_parser.parse, query) if use_ai else None
             results = await asyncio.to_thread(
                 search_tracks,
-                provider_query(intent),
+                provider_query(intent) if intent else query,
                 field=field,
                 max_duration=min(config.max_duration_seconds, 900),
                 cookies_file=config.cookies_file,
@@ -127,6 +129,11 @@ def create_application(config: Config) -> Application:
         message = update.message
         if message:
             await show_search_results(update, context, message.text.partition(" ")[2], "search")
+
+    async def ai_search_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        message = update.message
+        if message:
+            await show_search_results(update, context, message.text.partition(" ")[2], "search", True)
 
     async def field_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         message = update.message
@@ -269,6 +276,8 @@ def create_application(config: Config) -> Application:
                                 f"🎵 {track.artist} - {track.title}\n"
                                 f"💿 {analysis.codec or '?'} • {analysis.bitrate or '?'} kbps • "
                                 f"⏱ {int(analysis.duration // 60)}:{int(analysis.duration % 60):02d}\n"
+                                f"🥁 BPM: {analysis.bpm or 'unknown'} • 🎼 Key: {analysis.musical_key or 'unknown'} • "
+                                f"🎚️ Camelot: {analysis.camelot_key or 'unknown'}\n"
                                 f"🎧 {analysis.quality_note or 'Quality checked'}"
                             ),
                         )
@@ -282,6 +291,7 @@ def create_application(config: Config) -> Application:
     application.add_handler(CommandHandler(["start", "help"], help_handler))
     application.add_handler(CommandHandler("language", language_handler))
     application.add_handler(CommandHandler("search", search_command))
+    application.add_handler(CommandHandler("aisearch", ai_search_command))
     application.add_handler(CommandHandler(["title", "artist"], field_command))
     application.add_handler(CallbackQueryHandler(pick_handler, pattern=r"^pick:\d+$"))
     application.add_handler(CallbackQueryHandler(next_handler, pattern=r"^next:\d+$"))
