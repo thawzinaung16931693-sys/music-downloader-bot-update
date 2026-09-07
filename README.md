@@ -137,6 +137,9 @@ cannot be selected as download sources.
 Direct links are checked against the provider capability registry before download.
 Spotify, Apple Music, Deezer, Tidal, Beatport, and Traxsource links are reported as
 metadata-only instead of being sent to a downloader.
+Download failures now identify the detected provider and distinguish hidden or
+unavailable results from general provider errors. The bot suggests another
+permitted source when appropriate.
 
 Bandcamp direct links now use a provider adapter. Send a single public track URL
 such as `https://artist.bandcamp.com/track/name`; album and artist pages are rejected

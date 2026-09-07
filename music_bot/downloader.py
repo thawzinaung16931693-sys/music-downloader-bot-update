@@ -13,6 +13,7 @@ import json
 from collections.abc import Callable
 
 import yt_dlp
+from .provider_capabilities import detect_provider
 
 LOGGER = logging.getLogger(__name__)
 
@@ -293,9 +294,12 @@ def download_track(
         raise
     except yt_dlp.utils.DownloadError as exc:
         message = str(exc).removeprefix("ERROR: ").strip()
+        provider = detect_provider(url)
+        provider_name = provider.label if provider else "this provider"
         if "Sign in to confirm" in message or "not available" in message:
             raise DownloadError(
-                "This result is unavailable from the provider. Please choose another result."
+                f"{provider_name} rejected or hid this result. Please choose another result "
+                "or try a permitted link from another source."
             ) from exc
         if not _is_spotify_url(url):
             from .universal_fallback import download_with_universal_downloader
@@ -311,7 +315,7 @@ def download_track(
                     duration=0,
                     thumbnail=None,
                 )
-        raise DownloadError(f"I could not download this track: {message[:350]}") from exc
+        raise DownloadError(f"{provider_name} download failed: {message[:350]}") from exc
 
     mp3_path = prepared_path.with_suffix(".mp3")
     if not mp3_path.is_file():
