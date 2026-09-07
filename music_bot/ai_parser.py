@@ -25,6 +25,7 @@ class AIParser:
         self.endpoint = endpoint or os.getenv("AI_API_BASE_URL")
         self.api_key = api_key or os.getenv("AI_API_KEY")
         self.model = model or os.getenv("AI_MODEL", "gpt-4o-mini")
+        self.provider = os.getenv("AI_PROVIDER", "openai_compatible")
         self.timeout = float(os.getenv("AI_TIMEOUT_SECONDS", "45"))
         self.retries = max(0, int(os.getenv("AI_RETRIES", "1")))
         self.cache_seconds = max(0, int(os.getenv("AI_CACHE_SECONDS", "300")))
@@ -94,6 +95,8 @@ class AIParser:
         return _intent_from_values(query, values)
 
     async def _parse_remote_async(self, query: str) -> SearchIntent:
+        if self.provider == "gemini":
+            return await self._parse_gemini_async(query)
         endpoint = urljoin(self.endpoint.rstrip("/") + "/", "chat/completions")
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.post(
@@ -118,6 +121,30 @@ class AIParser:
             )
             response.raise_for_status()
             values = json.loads(response.json()["choices"][0]["message"]["content"])
+            return _intent_from_values(query, values)
+
+    async def _parse_gemini_async(self, query: str) -> SearchIntent:
+        endpoint = self.endpoint.rstrip("/")
+        if not endpoint.endswith(":generateContent"):
+            endpoint = f"{endpoint}/models/{self.model}:generateContent"
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            response = await client.post(
+                endpoint,
+                headers={"Content-Type": "application/json", "X-goog-api-key": self.api_key},
+                json={
+                    "contents": [{"parts": [{"text": (
+                        "You are a strict music search parser, not a recommender. Extract only facts "
+                        "explicitly present in the user's query. Never translate, replace, broaden, "
+                        "or invent a language, country, artist, title, genre, mood, or version. "
+                        "Return JSON only with keys artist, title, genre, mood, min_bpm, max_bpm, "
+                        "max_duration, instrumental, keywords. Original user query: "
+                        f"{query}"
+                    )}]}],
+                    "generationConfig": {"temperature": 0, "responseMimeType": "application/json"},
+                },
+            )
+            response.raise_for_status()
+            values = json.loads(response.json()["candidates"][0]["content"]["parts"][0]["text"])
             return _intent_from_values(query, values)
 
 

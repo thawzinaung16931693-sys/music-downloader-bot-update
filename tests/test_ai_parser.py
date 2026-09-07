@@ -33,3 +33,20 @@ def test_async_parser_uses_local_fallback_without_credentials() -> None:
     result = asyncio.run(AIParser(endpoint=None, api_key=None).parse_async("house 124 bpm"))
     assert result.used_ai is False
     assert result.fallback_reason == "not_configured"
+
+
+def test_gemini_endpoint_url_is_supported() -> None:
+    import os
+
+    previous = os.environ.get("AI_PROVIDER")
+    os.environ["AI_PROVIDER"] = "gemini"
+    parser = AIParser(
+        endpoint="https://generativelanguage.googleapis.com/v1beta",
+        api_key="test",
+        model="gemini-flash-latest",
+    )
+    assert parser.provider == "gemini"
+    if previous is None:
+        os.environ.pop("AI_PROVIDER", None)
+    else:
+        os.environ["AI_PROVIDER"] = previous
