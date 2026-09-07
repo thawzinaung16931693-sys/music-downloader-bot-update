@@ -165,6 +165,10 @@ BPM values are displayed and exported with exactly two decimal places. BPM and k
 values below the confidence threshold, outside safe musical ranges, or otherwise
 uncertain are reported as `unknown` instead of being presented as accurate facts.
 
+The UI uses the supplied Telegram custom emoji set in message cards and status
+messages, with normal emoji retained in keyboard labels because Telegram keyboards
+do not support rich custom-emoji entities.
+
 User preferences are available through `/settings` and the persistent `⚙️ Settings`
 button. Language, bitrate, and preferred searchable source are stored per user in
 `runtime/preferences.db` and survive service restarts.

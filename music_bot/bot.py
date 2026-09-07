@@ -25,6 +25,7 @@ from .metadata import enrich_metadata
 from .exports import metadata_record, write_metadata_exports
 from .source_catalog import SOURCE_CATALOG, source_definition
 from .preferences import Preferences
+from .ui import emoji
 
 LOGGER = logging.getLogger(__name__)
 HELP_TEXT = (
@@ -85,7 +86,7 @@ def create_application(config: Config) -> Application:
 
     async def menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if update.message:
-            await update.message.reply_text("🎛️ Music controls are ready below.", reply_markup=_menu(context))
+            await update.message.reply_text(f"{emoji('settings')} Music controls are ready below.", parse_mode="HTML", reply_markup=_menu(context))
 
     async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if update.message and update.effective_user:
@@ -98,7 +99,7 @@ def create_application(config: Config) -> Application:
     async def language_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if update.message:
             await update.message.reply_text(
-                "🌐 Choose your language / ဘာသာစကား / 语言:",
+                f"{emoji('settings')} Choose your language / ဘာသာစကား / 语言:",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("🇬🇧 English", callback_data="lang:en")],
                     [InlineKeyboardButton("🇲🇲 မြန်မာ", callback_data="lang:my")],
@@ -113,7 +114,7 @@ def create_application(config: Config) -> Application:
         if not message:
             return
         status = await message.reply_text(
-            f"🔎 <b>Searching</b>\n<code>{escape(query.strip())}</code>\n\n⏳ Finding the best matches...",
+            f"{emoji('search')} <b>Searching</b>\n<code>{escape(query.strip())}</code>\n\n⏳ Finding the best matches...",
             parse_mode="HTML",
         )
         try:
@@ -121,10 +122,10 @@ def create_application(config: Config) -> Application:
             intent = parsed.intent if parsed else None
             if use_ai and parsed:
                 if parsed.used_ai:
-                    await status.edit_text("🤖 AI understood your DJ request. Searching matching tracks...")
+                    await status.edit_text(f"{emoji('bot')} AI understood your DJ request. Searching matching tracks...", parse_mode="HTML")
                 else:
                     reason = "timed out" if parsed.fallback_reason == "timeout" else "is unavailable"
-                    await status.edit_text(f"⚠️ AI {reason}. Using local DJ parsing instead...")
+                    await status.edit_text(f"{emoji('warning')} AI {reason}. Using local DJ parsing instead...", parse_mode="HTML")
             results = await asyncio.to_thread(
                 search_tracks,
                 provider_query(intent) if intent else query,
@@ -156,7 +157,7 @@ def create_application(config: Config) -> Application:
             else:
                 await _show_search_page(status, context, 0)
         except DownloadError as exc:
-            await status.edit_text(f"⚠️ {escape(str(exc))}", parse_mode="HTML")
+            await status.edit_text(f"{emoji('warning')} {escape(str(exc))}", parse_mode="HTML")
         except Exception:
             LOGGER.exception("Unexpected failure while searching for %s", query)
             await status.edit_text("❌ An unexpected error occurred while searching.")
@@ -174,7 +175,7 @@ def create_application(config: Config) -> Application:
         base_query = context.user_data.get("search_query", "")
         query = " ".join(part for part in (base_query, genre) if part)
         selected_source = source or context.user_data.get("search_source", "youtube")
-        status = await message.reply_text(f"🔎 Searching {selected_source} for {escape(query)}...")
+        status = await message.reply_text(f"{emoji('search')} Searching {selected_source} for {escape(query)}...", parse_mode="HTML")
         try:
             search_query = query
             if context.user_data.get("search_use_ai"):
@@ -195,7 +196,7 @@ def create_application(config: Config) -> Application:
                 context.user_data["search_genre"] = genre
             await _show_search_page(status, context, 0)
         except DownloadError as exc:
-            await status.edit_text(f"⚠️ {escape(str(exc))}")
+            await status.edit_text(f"{emoji('warning')} {escape(str(exc))}", parse_mode="HTML")
 
     async def search_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         message = update.message
@@ -295,7 +296,7 @@ def create_application(config: Config) -> Application:
         context.user_data["language"] = language
         preferences.set(query.from_user.id, language=language)
         await query.answer()
-        await query.edit_message_text(f"✅ Language: {LANGUAGES[language]['name']}")
+        await query.edit_message_text(f"{emoji('success')} Language: {LANGUAGES[language]['name']}", parse_mode="HTML")
         await query.message.reply_text("🔎 Send a song, artist, or music link.", reply_markup=_menu(context))
 
     async def settings_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -411,7 +412,7 @@ def create_application(config: Config) -> Application:
         if not message:
             return
         status = await message.reply_text(
-            "🔗 <b>Processing your link</b>\n⏳ Extracting audio...", parse_mode="HTML"
+            f"{emoji('download')} <b>Processing your link</b>\n⏳ Extracting audio...", parse_mode="HTML"
         )
         try:
             async with semaphore:
@@ -459,7 +460,7 @@ def create_application(config: Config) -> Application:
                         record,
                         filename_stem=f"{track.artist}-{track.title}-dj-metadata",
                     )
-                    await status.edit_text("✅ <b>Track ready</b>\n⬆️ Uploading MP3...", parse_mode="HTML")
+                    await status.edit_text(f"{emoji('success')} <b>Track ready</b>\n⬆️ Uploading MP3...", parse_mode="HTML")
                     await message.chat.send_action(ChatAction.UPLOAD_DOCUMENT)
                     with track.path.open("rb") as audio_file:
                         await message.reply_audio(
