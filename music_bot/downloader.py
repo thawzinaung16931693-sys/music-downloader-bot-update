@@ -3,6 +3,7 @@ from __future__ import annotations
 import ipaddress
 import logging
 import re
+import re
 import socket
 from dataclasses import dataclass
 from pathlib import Path
@@ -102,7 +103,42 @@ def search_tracks(
         )
     if not results:
         raise DownloadError("No public results were found for that search.")
-    return results
+    return rank_search_results(results, query)
+
+
+def rank_search_results(results: list[SearchResult], query: str) -> list[SearchResult]:
+    """Rank provider results for accurate, DJ-oriented search ordering."""
+    tokens = _search_tokens(query)
+    return sorted(results, key=lambda result: _result_score(result, tokens), reverse=True)
+
+
+def _search_tokens(query: str) -> set[str]:
+    return {
+        token
+        for token in re.findall(r"[\w']+", query.casefold())
+        if len(token) > 1 and token not in {"audio", "music", "song"}
+    }
+
+
+def _result_score(result: SearchResult, tokens: set[str]) -> float:
+    title = result.title.casefold()
+    artist = result.artist.casefold()
+    haystack = f"{title} {artist}"
+    matched = sum(token in haystack for token in tokens)
+    score = matched * 10.0
+    if tokens and all(token in haystack for token in tokens):
+        score += 25.0
+    if tokens and all(token in title for token in tokens):
+        score += 12.0
+    if "official audio" in title or "audio" in title:
+        score += 8.0
+    if any(tag in title for tag in ("extended mix", "club mix", "original mix", "remix")):
+        score += 5.0
+    if any(tag in title for tag in ("official video", "live", "shorts", "teaser", "cover")):
+        score -= 8.0
+    if result.duration:
+        score += 2.0
+    return score
 
 
 class _QuietYtdlpLogger:

@@ -8,6 +8,7 @@ from music_bot.downloader import (
     extract_url,
     validate_public_url,
     search_tracks,
+    rank_search_results,
 )
 from unittest.mock import patch
 
@@ -72,3 +73,14 @@ def test_search_builds_video_url_from_flat_result_id() -> None:
         youtube_dl.return_value.__enter__.return_value.extract_info.return_value = fake_info
         result = search_tracks("test")[0]
     assert result.url == "https://www.youtube.com/watch?v=abc123"
+
+
+def test_rank_search_results_prefers_exact_audio_result() -> None:
+    from music_bot.downloader import SearchResult
+
+    results = [
+        SearchResult("live", "Daft Punk - One More Time (Live)", "Daft Punk", 240),
+        SearchResult("audio", "Daft Punk - One More Time (Official Audio)", "Daft Punk", 230),
+        SearchResult("other", "One More Time", "Someone Else", 200),
+    ]
+    assert rank_search_results(results, "Daft Punk One More Time")[0].url == "audio"

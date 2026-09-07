@@ -111,6 +111,9 @@ and available public results. Results longer than `MAX_DURATION_SECONDS` are hid
 from search. Search and URL downloads use the same duration and file-size limits.
 The default maximum is 15 minutes. A provider may omit duration metadata; such a
 result is allowed into the list and is checked again before download.
+Results are ranked for exact artist/title relevance and DJ-friendly versions before
+pagination, with official videos, live recordings, shorts, covers, and weak matches
+ranked lower.
 
 ## Tests
 
