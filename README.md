@@ -181,6 +181,10 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
+GitHub Actions runs the same compilation and pytest checks on Python 3.13 for every
+push and pull request to `main`. The workflow does not use production bot, AI, or
+cookie secrets.
+
 ## Google Cloud VM deployment
 
 The bot does not need a public HTTP port. A small Ubuntu LTS VM is sufficient for
