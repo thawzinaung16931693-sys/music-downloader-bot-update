@@ -20,7 +20,7 @@ from telegram.ext import (
 from .config import Config
 from .ai_parser import AIParser, provider_query
 from .audio_analysis import analyze_audio
-from .downloader import DownloadError, SearchResult, download_track, extract_url, search_tracks
+from .downloader import DownloadError, SearchResult, apply_advanced_filters, download_track, extract_url, search_tracks
 from .metadata import enrich_metadata
 from .exports import metadata_record, write_metadata_exports
 from .source_catalog import SOURCE_CATALOG, source_definition
@@ -178,7 +178,6 @@ def create_application(config: Config) -> Application:
         query = " ".join(part for part in (base_query, genre) if part)
         selected_source = source or context.user_data.get("search_source", "youtube")
         advanced = context.user_data.get("advanced_filters", {})
-        query = " ".join([query, *advanced.values()]).strip()
         status = await message.reply_text(f"{emoji('search')} Searching {selected_source} for {escape(query)}...", parse_mode="HTML")
         try:
             search_query = query
@@ -193,6 +192,9 @@ def create_application(config: Config) -> Application:
                 cookies_file=config.cookies_file,
                 source=selected_source,
             )
+            results = apply_advanced_filters(results, advanced)
+            if not results:
+                raise DownloadError("No tracks match those filters. Try a broader filter.")
             context.user_data["search_results"] = results
             context.user_data["search_source"] = selected_source
             context.user_data["search_query"] = query

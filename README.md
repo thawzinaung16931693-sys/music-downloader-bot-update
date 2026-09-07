@@ -125,6 +125,8 @@ Every result page includes `⚙️ Filters`. Choose a source (`▶️ YouTube`,
 used to run the search again. Filters are applied before ranking and pagination.
 Advanced filters are also available from `⚙️ Filters`: BPM range, duration, version
 (remix, extended mix, instrumental, or acapella), and source-quality preference.
+The bot performs a broad provider search first, then applies duration and version
+filters locally so provider-specific keyword syntax cannot hide valid results.
 
 The recommended implementation order is YouTube, SoundCloud, Bandcamp, Audius,
 HearThis.at, Jamendo, Free Music Archive, Internet Archive, ccMixter, then

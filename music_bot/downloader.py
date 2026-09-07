@@ -119,6 +119,34 @@ def rank_search_results(results: list[SearchResult], query: str) -> list[SearchR
     return remove_duplicate_results(ranked)
 
 
+def apply_advanced_filters(
+    results: list[SearchResult], filters: dict[str, str]
+) -> list[SearchResult]:
+    """Apply filters locally after broad provider search."""
+    filtered = results
+    duration = filters.get("duration")
+    if duration == "under 5 minutes":
+        filtered = [result for result in filtered if 0 < result.duration < 300]
+    elif duration == "5 to 10 minutes":
+        filtered = [result for result in filtered if 300 <= result.duration <= 600]
+    elif duration == "10 to 15 minutes":
+        filtered = [result for result in filtered if 600 < result.duration <= 900]
+
+    version = filters.get("version")
+    if version:
+        version_terms = {
+            "remix": ("remix",),
+            "extended mix": ("extended mix", "extended"),
+            "instrumental": ("instrumental",),
+            "acapella": ("acapella", "a cappella"),
+        }.get(version, (version,))
+        filtered = [
+            result for result in filtered
+            if any(term in result.title.casefold() for term in version_terms)
+        ]
+    return filtered
+
+
 def remove_duplicate_results(results: list[SearchResult]) -> list[SearchResult]:
     """Remove duplicate uploads while preserving distinct mixes and live versions."""
     unique: list[SearchResult] = []
