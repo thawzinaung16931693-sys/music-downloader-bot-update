@@ -20,7 +20,7 @@ def enrich_metadata(path: Path, analysis: AudioAnalysis, *, title: str, artist: 
         if album:
             tags.add(TALB(encoding=3, text=album))
         if analysis.bpm:
-            tags.add(TBPM(encoding=3, text=str(round(analysis.bpm, 2))))
+            tags.add(TBPM(encoding=3, text=f"{analysis.bpm:.2f}"))
         if analysis.musical_key:
             tags.add(TKEY(encoding=3, text=analysis.musical_key))
         if analysis.quality_note:

@@ -7,6 +7,7 @@ from pathlib import Path
 from .dj_models import AudioAnalysis
 
 ANALYSIS_WINDOW_SECONDS = 60
+MIN_CONFIDENCE = 0.55
 
 
 def analyze_audio(path: Path) -> AudioAnalysis:
@@ -64,7 +65,14 @@ def _analyze_music(path: Path) -> tuple[float | None, float | None, str | None, 
         camelot = _camelot_key(pitch_class, mode)
         bpm = float(tempo[0] if hasattr(tempo, "__len__") else tempo)
         bpm_confidence = _bpm_confidence(beat_frames, len(y), sample_rate)
-        return (bpm if bpm > 0 else None), bpm_confidence, musical_key, key_confidence, camelot
+        if not 40 <= bpm <= 240 or bpm_confidence < MIN_CONFIDENCE:
+            bpm = None
+            bpm_confidence = None
+        if key_confidence < MIN_CONFIDENCE:
+            musical_key = None
+            key_confidence = None
+            camelot = None
+        return bpm, bpm_confidence, musical_key, key_confidence, camelot
     except (ImportError, OSError, ValueError, RuntimeError):
         return None, None, None, None, None
 
