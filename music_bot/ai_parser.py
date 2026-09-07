@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 from urllib.parse import urljoin
 
 import httpx
@@ -25,6 +26,9 @@ class AIParser:
         self.api_key = api_key or os.getenv("AI_API_KEY")
         self.model = model or os.getenv("AI_MODEL", "gpt-4o-mini")
         self.timeout = float(os.getenv("AI_TIMEOUT_SECONDS", "45"))
+        self.retries = max(0, int(os.getenv("AI_RETRIES", "1")))
+        self.cache_seconds = max(0, int(os.getenv("AI_CACHE_SECONDS", "300")))
+        self._cache: dict[str, tuple[float, ParseResult]] = {}
 
     def parse(self, query: str) -> ParseResult:
         query = " ".join(query.split()).strip()
@@ -38,6 +42,29 @@ class AIParser:
             except (httpx.HTTPError, KeyError, TypeError, ValueError, json.JSONDecodeError):
                 return ParseResult(parse_locally(query), False, "invalid_response")
         return ParseResult(parse_locally(query), False, "not_configured")
+
+    async def parse_async(self, query: str) -> ParseResult:
+        """Parse without blocking the Telegram event loop."""
+        query = " ".join(query.split()).strip()
+        if not query or len(query) > 200:
+            raise ValueError("Search text must contain between 1 and 200 characters.")
+        cached = self._cache.get(query.casefold())
+        if cached and time.monotonic() - cached[0] < self.cache_seconds:
+            return cached[1]
+        if not self.endpoint or not self.api_key:
+            return ParseResult(parse_locally(query), False, "not_configured")
+        for attempt in range(self.retries + 1):
+            try:
+                result = ParseResult(await self._parse_remote_async(query), True)
+                self._cache[query.casefold()] = (time.monotonic(), result)
+                return result
+            except httpx.TimeoutException:
+                reason = "timeout"
+            except (httpx.HTTPError, KeyError, TypeError, ValueError, json.JSONDecodeError):
+                reason = "invalid_response"
+            if attempt < self.retries:
+                await __import__("asyncio").sleep(1.5 * (attempt + 1))
+        return ParseResult(parse_locally(query), False, reason)
 
     def _parse_remote(self, query: str) -> SearchIntent:
         endpoint = urljoin(self.endpoint.rstrip("/") + "/", "chat/completions")
@@ -65,6 +92,33 @@ class AIParser:
         response.raise_for_status()
         values = json.loads(response.json()["choices"][0]["message"]["content"])
         return _intent_from_values(query, values)
+
+    async def _parse_remote_async(self, query: str) -> SearchIntent:
+        endpoint = urljoin(self.endpoint.rstrip("/") + "/", "chat/completions")
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            response = await client.post(
+                endpoint,
+                headers={"Authorization": f"Bearer {self.api_key}"},
+                json={
+                    "model": self.model,
+                    "temperature": 0,
+                    "response_format": {"type": "json_object"},
+                    "messages": [{"role": "user", "content": (
+                        "You are a strict music search parser, not a recommender. Extract only facts "
+                        "explicitly present in the user's query. Never translate, replace, broaden, "
+                        "or invent a language, country, artist, title, genre, mood, or version. "
+                        "Preserve terms such as Myanmar, Burmese, popular, house, remix, live, "
+                        "instrumental, and extended mix. Return JSON only with keys artist, title, "
+                        "genre, mood, min_bpm, max_bpm, max_duration, instrumental, keywords. "
+                        "Put important original terms that do not fit another field in keywords. "
+                        "Use null or [] when absent. Original user query: "
+                        f"{query}"
+                    )}],
+                },
+            )
+            response.raise_for_status()
+            values = json.loads(response.json()["choices"][0]["message"]["content"])
+            return _intent_from_values(query, values)
 
 
 def parse_locally(query: str) -> SearchIntent:

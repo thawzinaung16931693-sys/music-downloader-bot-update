@@ -118,7 +118,7 @@ def create_application(config: Config) -> Application:
             parse_mode="HTML",
         )
         try:
-            parsed = await asyncio.to_thread(ai_parser.parse, query) if use_ai else None
+            parsed = await ai_parser.parse_async(query) if use_ai else None
             intent = parsed.intent if parsed else None
             if use_ai and parsed:
                 if parsed.used_ai:

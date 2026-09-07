@@ -1,3 +1,5 @@
+import asyncio
+
 from music_bot.ai_parser import AIParser, parse_locally, provider_query
 
 
@@ -25,3 +27,9 @@ def test_provider_query_uses_dj_filters() -> None:
 def test_provider_query_preserves_original_user_keywords() -> None:
     intent = parse_locally("Popular Myanmar House Remix")
     assert "Popular Myanmar House Remix" in provider_query(intent)
+
+
+def test_async_parser_uses_local_fallback_without_credentials() -> None:
+    result = asyncio.run(AIParser(endpoint=None, api_key=None).parse_async("house 124 bpm"))
+    assert result.used_ai is False
+    assert result.fallback_reason == "not_configured"
