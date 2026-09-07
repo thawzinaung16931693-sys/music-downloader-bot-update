@@ -123,6 +123,8 @@ Every result page includes `⚙️ Filters`. Choose a source (`▶️ YouTube`,
 `☁️ SoundCloud`, or other direct-URL sources) and a genre (`D&B`, `House`, `Vinahouse`, `Bounce`, `Dubstep`,
 `SpeedHouse`, or `Custom`). A custom genre is entered as the next message and is
 used to run the search again. Filters are applied before ranking and pagination.
+Advanced filters are also available from `⚙️ Filters`: BPM range, duration, version
+(remix, extended mix, instrumental, or acapella), and source-quality preference.
 
 The recommended implementation order is YouTube, SoundCloud, Bandcamp, Audius,
 HearThis.at, Jamendo, Free Music Archive, Internet Archive, ccMixter, then

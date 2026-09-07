@@ -149,6 +149,7 @@ def create_application(config: Config) -> Application:
             if update.effective_user:
                 context.user_data["search_source"] = preferences.get(update.effective_user.id)["source"]
             context.user_data["search_genre"] = None
+            context.user_data["advanced_filters"] = {}
             context.user_data["search_owner"] = update.effective_user.id if update.effective_user else None
             first = results[0] if results else None
             if first and first.thumbnail:
@@ -176,6 +177,8 @@ def create_application(config: Config) -> Application:
         base_query = context.user_data.get("search_query", "")
         query = " ".join(part for part in (base_query, genre) if part)
         selected_source = source or context.user_data.get("search_source", "youtube")
+        advanced = context.user_data.get("advanced_filters", {})
+        query = " ".join([query, *advanced.values()]).strip()
         status = await message.reply_text(f"{emoji('search')} Searching {selected_source} for {escape(query)}...", parse_mode="HTML")
         try:
             search_query = query
@@ -348,6 +351,10 @@ def create_application(config: Config) -> Application:
         await query.edit_message_reply_markup(reply_markup=InlineKeyboardMarkup([
             [InlineKeyboardButton("🌐 Source", callback_data="filter:source")],
             [InlineKeyboardButton("🎚️ Genre", callback_data="filter:genre")],
+            [InlineKeyboardButton("🥁 BPM range", callback_data="advanced:bpm")],
+            [InlineKeyboardButton("⏱️ Duration", callback_data="advanced:duration")],
+            [InlineKeyboardButton("🎛️ Version", callback_data="advanced:version")],
+            [InlineKeyboardButton("💿 Quality", callback_data="advanced:quality")],
             [InlineKeyboardButton("↩️ Back to results", callback_data="filter:back")],
         ]))
 
@@ -413,6 +420,32 @@ def create_application(config: Config) -> Application:
             await query.edit_message_text("🎚️ Send your custom genre, for example: liquid drum and bass")
             return
         await run_filtered_search(update, context, genre=genre)
+
+    async def advanced_filter_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        query = update.callback_query
+        if not query or query.from_user.id != context.user_data.get("search_owner"):
+            return
+        kind = (query.data or "").split(":", 1)[1]
+        options = {
+            "bpm": [("120-124 BPM", "120-124 bpm"), ("125-128 BPM", "125-128 bpm"), ("129-135 BPM", "129-135 bpm")],
+            "duration": [("Under 5 minutes", "under 5 minutes"), ("5-10 minutes", "5 to 10 minutes"), ("10-15 minutes", "10 to 15 minutes")],
+            "version": [("Remix", "remix"), ("Extended mix", "extended mix"), ("Instrumental", "instrumental"), ("Acapella", "acapella")],
+            "quality": [("320 kbps source", "320 kbps"), ("Lossless / FLAC", "lossless FLAC")],
+        }
+        await query.answer()
+        await query.edit_message_reply_markup(reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton(label, callback_data=f"advanced_set:{kind}:{value}")]
+            for label, value in options[kind]
+        ] + [[InlineKeyboardButton("↩️ Back", callback_data="filter:panel")]]))
+
+    async def advanced_set_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        query = update.callback_query
+        if not query or query.from_user.id != context.user_data.get("search_owner"):
+            return
+        _, kind, value = (query.data or "").split(":", 2)
+        context.user_data.setdefault("advanced_filters", {})[kind] = value
+        await query.answer(f"{kind.title()} filter applied")
+        await run_filtered_search(update, context)
 
     async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
         LOGGER.error("Unhandled Telegram update error", exc_info=context.error)
@@ -530,6 +563,8 @@ def create_application(config: Config) -> Application:
     application.add_handler(CallbackQueryHandler(filter_choice_handler, pattern=r"^filter:(source|genre|urls|metadata|panel|back)$"))
     application.add_handler(CallbackQueryHandler(source_handler, pattern=r"^source:(youtube|soundcloud)$"))
     application.add_handler(CallbackQueryHandler(genre_handler, pattern=r"^genre:(D&B|House|Vinahouse|Bounce|Dubstep|SpeedHouse|Custom)$"))
+    application.add_handler(CallbackQueryHandler(advanced_filter_handler, pattern=r"^advanced:(bpm|duration|version|quality)$"))
+    application.add_handler(CallbackQueryHandler(advanced_set_handler, pattern=r"^advanced_set:(bpm|duration|version|quality):.+$"))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
     application.add_error_handler(error_handler)
     return application
