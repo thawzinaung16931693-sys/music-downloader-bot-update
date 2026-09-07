@@ -18,7 +18,10 @@ from telegram.ext import (
 )
 
 from .config import Config
+from .ai_parser import AIParser
+from .audio_analysis import analyze_audio
 from .downloader import DownloadError, SearchResult, download_track, extract_url, search_tracks
+from .metadata import enrich_metadata
 
 LOGGER = logging.getLogger(__name__)
 HELP_TEXT = (
@@ -67,6 +70,7 @@ def create_application(config: Config) -> Application:
         .build()
     )
     semaphore = asyncio.Semaphore(config.download_workers)
+    ai_parser = AIParser()
 
     async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if update.message:
@@ -94,9 +98,10 @@ def create_application(config: Config) -> Application:
             parse_mode="HTML",
         )
         try:
+            intent = await asyncio.to_thread(ai_parser.parse, query)
             results = await asyncio.to_thread(
                 search_tracks,
-                query,
+                intent.raw_query,
                 field=field,
                 max_duration=min(config.max_duration_seconds, 900),
                 cookies_file=config.cookies_file,
@@ -246,13 +251,26 @@ def create_application(config: Config) -> Application:
                                 parse_mode="HTML",
                             )
                     track = await download_task
+                    analysis = await asyncio.to_thread(analyze_audio, track.path)
+                    await asyncio.to_thread(
+                        enrich_metadata,
+                        track.path,
+                        analysis,
+                        title=track.title,
+                        artist=track.artist,
+                    )
                     await status.edit_text("✅ <b>Track ready</b>\n⬆️ Uploading MP3...", parse_mode="HTML")
                     await message.chat.send_action(ChatAction.UPLOAD_DOCUMENT)
                     with track.path.open("rb") as audio_file:
                         await message.reply_audio(
                             audio=audio_file, title=track.title, performer=track.artist,
                             duration=track.duration or None,
-                            caption=f"{track.artist} - {track.title}",
+                            caption=(
+                                f"🎵 {track.artist} - {track.title}\n"
+                                f"💿 {analysis.codec or '?'} • {analysis.bitrate or '?'} kbps • "
+                                f"⏱ {int(analysis.duration // 60)}:{int(analysis.duration % 60):02d}\n"
+                                f"🎧 {analysis.quality_note or 'Quality checked'}"
+                            ),
                         )
             await status.delete()
         except DownloadError as exc:

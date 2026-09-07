@@ -17,6 +17,14 @@ ID/hash is required.
 Use the bot only for audio you own or are authorized to download. Provider support
 can change when sites update their APIs or anti-bot systems.
 
+## Phase 1 DJ backend
+
+Phase 1 is developed on the `phase1-dj-ai` branch and is pushed to a separate
+repository. It adds an optional OpenAI-compatible DJ query parser with a local
+fallback, FFprobe technical audio analysis, and Mutagen metadata enrichment. The
+bot reports codec, bitrate, duration, and source-quality notes with each download.
+AI configuration is optional and is documented in `.env.example`.
+
 ## Requirements
 
 - Python 3.11 or newer
