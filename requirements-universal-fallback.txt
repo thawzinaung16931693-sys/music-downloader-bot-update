@@ -1,0 +1,2 @@
+-r requirements.txt
+universal-downloader @ git+https://github.com/vmexe/universal-downloader.git@main

@@ -38,6 +38,10 @@ fi
 python3 -m venv "$APP_DIR/.venv"
 "$APP_DIR/.venv/bin/python" -m pip install --upgrade pip
 "$APP_DIR/.venv/bin/pip" install --requirement "$APP_DIR/requirements.txt"
+if [[ "${INSTALL_UNIVERSAL_FALLBACK:-false}" == "true" ]]; then
+  "$APP_DIR/.venv/bin/pip" install --no-deps \
+    "universal-downloader @ git+https://github.com/vmexe/universal-downloader.git@main"
+fi
 
 install -d -m 0750 -o "$APP_USER" -g "$APP_USER" "$APP_DIR/runtime"
 install -m 0644 "$APP_DIR/deploy/telegram-music-bot.service" \

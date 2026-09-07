@@ -261,7 +261,21 @@ def download_track(
 
             info = ydl.extract_info(info.get("webpage_url") or target, download=True)
             prepared_path = Path(ydl.prepare_filename(info))
-    except DownloadError:
+    except DownloadError as exc:
+        if not _is_spotify_url(url) and "too long" not in str(exc).lower():
+            from .universal_fallback import download_with_universal_downloader
+
+            fallback_path = download_with_universal_downloader(
+                url, output_dir, cookies_file=cookies_file, max_duration=max_duration
+            )
+            if fallback_path:
+                return DownloadedTrack(
+                    path=fallback_path,
+                    title=fallback_path.stem,
+                    artist="Unknown artist",
+                    duration=0,
+                    thumbnail=None,
+                )
         raise
     except yt_dlp.utils.DownloadError as exc:
         message = str(exc).removeprefix("ERROR: ").strip()
@@ -269,6 +283,20 @@ def download_track(
             raise DownloadError(
                 "This result is unavailable from the provider. Please choose another result."
             ) from exc
+        if not _is_spotify_url(url):
+            from .universal_fallback import download_with_universal_downloader
+
+            fallback_path = download_with_universal_downloader(
+                url, output_dir, cookies_file=cookies_file, max_duration=max_duration
+            )
+            if fallback_path:
+                return DownloadedTrack(
+                    path=fallback_path,
+                    title=fallback_path.stem,
+                    artist="Unknown artist",
+                    duration=0,
+                    thumbnail=None,
+                )
         raise DownloadError(f"I could not download this track: {message[:350]}") from exc
 
     mp3_path = prepared_path.with_suffix(".mp3")

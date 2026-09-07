@@ -134,6 +134,28 @@ YouTube and SoundCloud are searchable by keyword, direct-URL sources can be used
 sending their public track URL, and metadata-only services are clearly labelled and
 cannot be selected as download sources.
 
+## Universal downloader fallback
+
+The optional MIT-licensed project
+<https://github.com/vmexe/universal-downloader> can be installed as a fallback for
+direct non-Spotify links. The bot tries its native downloader first, then uses the
+external project's headless yt-dlp engine if native extraction fails:
+
+```bash
+pip install -r requirements-universal-fallback.txt
+```
+
+For a headless VM, prefer `requirements-universal-fallback-core.txt` and install
+the external project's core package without its optional GUI dependencies. The
+adapter is optional; if it is not installed, the native downloader remains active.
+For the deployment scripts, set `INSTALL_UNIVERSAL_FALLBACK=true` before running
+bootstrap or update; they install the external package with `--no-deps` because this
+bot already provides its headless runtime dependencies.
+
+The fallback is not used for Spotify URLs. Spotify Premium credentials do not
+provide a legitimate MP3 download endpoint, so Spotify remains metadata/matching
+only. The fallback must only be used for audio the user is authorized to download.
+
 Downloads include a quality score, source codec/bitrate, warnings for low-quality
 audio, and a warning when a high-bitrate MP3 may be an upscaled source.
 Each completed download also sends track-named `.json` and `.csv` files with
