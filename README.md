@@ -151,6 +151,10 @@ download.
 Jamendo public track URLs are validated as single-track links. Check the track's
 Creative Commons or other license before downloading or using it in a DJ set.
 
+Free Music Archive track URLs are validated as single-track links. Verify the
+track's specific license before using it in a DJ set, public performance, remix, or
+commercial project.
+
 ## Universal downloader fallback
 
 The optional MIT-licensed project

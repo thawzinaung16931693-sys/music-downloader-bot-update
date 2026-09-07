@@ -141,3 +141,11 @@ def test_jamendo_adapter_accepts_track_and_rejects_catalog() -> None:
     validate_jamendo_track_url("https://www.jamendo.com/track/123/name")
     with pytest.raises(DownloadError, match="one Jamendo track"):
         validate_jamendo_track_url("https://www.jamendo.com/artists/")
+
+
+def test_fma_adapter_accepts_track_and_rejects_catalog() -> None:
+    from music_bot.providers.fma import validate_fma_track_url
+
+    validate_fma_track_url("https://freemusicarchive.org/music/Artist/Track/")
+    with pytest.raises(DownloadError, match="one Free Music Archive track"):
+        validate_fma_track_url("https://freemusicarchive.org/search")
