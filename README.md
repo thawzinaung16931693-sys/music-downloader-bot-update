@@ -121,7 +121,7 @@ remixes, instrumentals, acapellas, and live versions remain available.
 
 Downloads include a quality score, source codec/bitrate, warnings for low-quality
 audio, and a warning when a high-bitrate MP3 may be an upscaled source.
-Each completed download also sends `dj-metadata.json` and `dj-metadata.csv` with
+Each completed download also sends track-named `.json` and `.csv` files with
 the DJ analysis fields for library import or custom workflows. These files contain
 the original/source quality fields and analysis confidence values.
 BPM values are displayed and exported with exactly two decimal places. BPM and key

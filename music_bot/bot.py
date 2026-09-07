@@ -290,7 +290,10 @@ def create_application(config: Config) -> Application:
                     )
                     record = metadata_record(title=track.title, artist=track.artist, analysis=analysis)
                     json_path, csv_path = await asyncio.to_thread(
-                        write_metadata_exports, Path(temp_dir), record
+                        write_metadata_exports,
+                        Path(temp_dir),
+                        record,
+                        filename_stem=f"{track.artist}-{track.title}-dj-metadata",
                     )
                     await status.edit_text("✅ <b>Track ready</b>\n⬆️ Uploading MP3...", parse_mode="HTML")
                     await message.chat.send_action(ChatAction.UPLOAD_DOCUMENT)
