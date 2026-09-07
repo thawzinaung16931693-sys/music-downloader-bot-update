@@ -31,6 +31,14 @@ def enrich_metadata(path: Path, analysis: AudioAnalysis, *, title: str, artist: 
             tags.add(TXXX(encoding=3, desc="DJ_BPM_CONFIDENCE", text=f"{analysis.bpm_confidence:.3f}"))
         if analysis.key_confidence is not None:
             tags.add(TXXX(encoding=3, desc="DJ_KEY_CONFIDENCE", text=f"{analysis.key_confidence:.3f}"))
+        if analysis.quality_score is not None:
+            tags.add(TXXX(encoding=3, desc="DJ_QUALITY_SCORE", text=str(analysis.quality_score)))
+        if analysis.source_bitrate is not None:
+            tags.add(TXXX(encoding=3, desc="DJ_SOURCE_BITRATE", text=f"{analysis.source_bitrate} kbps"))
+        if analysis.source_codec:
+            tags.add(TXXX(encoding=3, desc="DJ_SOURCE_CODEC", text=analysis.source_codec))
+        if analysis.is_likely_upscaled:
+            tags.add(TXXX(encoding=3, desc="DJ_QUALITY_WARNING", text="Likely upscaled source"))
         tags.save(path, v2_version=3)
     except (ImportError, OSError):
         pass

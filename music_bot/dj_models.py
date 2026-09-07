@@ -30,6 +30,10 @@ class AudioAnalysis:
     energy: float | None = None
     danceability: float | None = None
     quality_note: str | None = None
+    quality_score: int | None = None
+    source_bitrate: int | None = None
+    source_codec: str | None = None
+    is_likely_upscaled: bool = False
     warnings: tuple[str, ...] = field(default_factory=tuple)
 
 

@@ -364,6 +364,8 @@ def _analysis_caption(artist: str, title: str, analysis) -> str:
         f"⏱ {int(analysis.duration // 60)}:{int(analysis.duration % 60):02d}\n"
         f"🥁 BPM: {analysis.bpm or 'unknown'} • 🎼 Key: {analysis.musical_key or 'unknown'} • "
         f"🎚️ Camelot: {analysis.camelot_key or 'unknown'}\n"
+        f"📊 Quality score: {analysis.quality_score if analysis.quality_score is not None else '?'} / 100\n"
+        f"{'⚠️ ' + ' '.join(analysis.warnings) if analysis.warnings else '✅ No quality warnings'}\n"
         f"{confidence}🎧 {analysis.quality_note or 'Quality checked'}"
     )
 

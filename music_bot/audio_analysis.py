@@ -26,13 +26,26 @@ def analyze_audio(path: Path) -> AudioAnalysis:
     bitrate = int(bitrate_raw) // 1000 if bitrate_raw else None
     sample_rate = int(audio["sample_rate"]) if audio.get("sample_rate") else None
     bpm, bpm_confidence, musical_key, key_confidence, camelot_key = _analyze_music(path)
-    warnings = (f"Source bitrate is only {bitrate} kbps.",) if bitrate and bitrate < 256 else ()
-    note = "Source quality appears suitable for DJ use." if not warnings else "Quality may be lower than requested."
+    warnings = []
+    if bitrate and bitrate < 256:
+        warnings.append(f"Source bitrate is only {bitrate} kbps.")
+    if sample_rate and sample_rate < 44_100:
+        warnings.append(f"Source sample rate is only {sample_rate} Hz.")
+    likely_upscaled = bool(
+        bitrate and bitrate >= 300 and sample_rate and sample_rate <= 44_100
+        and audio.get("codec_name") == "mp3"
+    )
+    if likely_upscaled:
+        warnings.append("High bitrate does not prove the source is lossless; it may be upscaled.")
+    score = max(0, min(100, 100 - (25 if bitrate and bitrate < 192 else 10 if bitrate and bitrate < 256 else 0) - (15 if likely_upscaled else 0)))
+    note = "Source quality appears suitable for DJ use." if not warnings else "Source quality should be checked before club playback."
     return AudioAnalysis(
         duration, bitrate, sample_rate, audio.get("codec_name"),
         bpm=bpm, bpm_confidence=bpm_confidence, musical_key=musical_key,
         key_confidence=key_confidence, camelot_key=camelot_key,
-        quality_note=note, warnings=warnings,
+        quality_note=note, quality_score=score, source_bitrate=bitrate,
+        source_codec=audio.get("codec_name"), is_likely_upscaled=likely_upscaled,
+        warnings=tuple(warnings),
     )
 
 

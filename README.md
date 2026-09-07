@@ -117,6 +117,9 @@ ranked lower.
 Duplicate uploads are removed while distinct versions such as extended mixes,
 remixes, instrumentals, acapellas, and live versions remain available.
 
+Downloads include a quality score, source codec/bitrate, warnings for low-quality
+audio, and a warning when a high-bitrate MP3 may be an upscaled source.
+
 ## Tests
 
 ```powershell
