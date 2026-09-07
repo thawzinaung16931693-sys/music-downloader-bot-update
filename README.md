@@ -118,10 +118,21 @@ pagination, with official videos, live recordings, shorts, covers, and weak matc
 ranked lower.
 Duplicate uploads are removed while distinct versions such as extended mixes,
 remixes, instrumentals, acapellas, and live versions remain available.
-Every result page includes `⚙️ Filters`. Choose a source (`▶️ YouTube` or
-`☁️ SoundCloud`) and a genre (`D&B`, `House`, `Vinahouse`, `Bounce`, `Dubstep`,
+Every result page includes `⚙️ Filters`. Choose a source (`▶️ YouTube`,
+`☁️ SoundCloud`, or other direct-URL sources) and a genre (`D&B`, `House`, `Vinahouse`, `Bounce`, `Dubstep`,
 `SpeedHouse`, or `Custom`). A custom genre is entered as the next message and is
 used to run the search again. Filters are applied before ranking and pagination.
+
+The recommended implementation order is YouTube, SoundCloud, Bandcamp, Audius,
+HearThis.at, Jamendo, Free Music Archive, Internet Archive, ccMixter, then
+metadata-only integrations for Spotify, Beatport, Apple Music, Deezer, Tidal, and
+Traxsource. Only YouTube and SoundCloud currently provide keyword search in the
+bot. The other direct sources accept their public URLs when yt-dlp can access them
+and downloads are permitted by the owner.
+The filter panel lists all of these categories so users can see what is supported:
+YouTube and SoundCloud are searchable by keyword, direct-URL sources can be used by
+sending their public track URL, and metadata-only services are clearly labelled and
+cannot be selected as download sources.
 
 Downloads include a quality score, source codec/bitrate, warnings for low-quality
 audio, and a warning when a high-bitrate MP3 may be an upscaled source.

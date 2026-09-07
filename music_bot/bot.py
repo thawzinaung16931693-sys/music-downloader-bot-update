@@ -23,6 +23,7 @@ from .audio_analysis import analyze_audio
 from .downloader import DownloadError, SearchResult, download_track, extract_url, search_tracks
 from .metadata import enrich_metadata
 from .exports import metadata_record, write_metadata_exports
+from .source_catalog import SOURCE_CATALOG, source_definition
 
 LOGGER = logging.getLogger(__name__)
 HELP_TEXT = (
@@ -294,11 +295,27 @@ def create_application(config: Config) -> Application:
         choice = (query.data or "").split(":", 1)[1]
         await query.answer()
         if choice == "source":
+            searchable = [source for source in SOURCE_CATALOG if source.mode == "search"]
             await query.edit_message_reply_markup(reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("▶️ YouTube", callback_data="source:youtube")],
-                [InlineKeyboardButton("☁️ SoundCloud", callback_data="source:soundcloud")],
+                *[[InlineKeyboardButton(source.label, callback_data=f"source:{source.key}")] for source in searchable],
+                [InlineKeyboardButton("🔗 Other direct URLs", callback_data="filter:urls")],
+                [InlineKeyboardButton("ℹ️ Metadata-only sources", callback_data="filter:metadata")],
                 [InlineKeyboardButton("↩️ Back", callback_data="filter:panel")],
             ]))
+        elif choice == "urls":
+            url_sources = [source for source in SOURCE_CATALOG if source.mode == "url"]
+            await query.edit_message_text(
+                "🔗 Send a public URL from one of these sources. The owner must permit downloads:\n\n"
+                + "\n".join(f"{source.label} • {source.note}" for source in url_sources),
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("↩️ Back", callback_data="filter:panel")]]),
+            )
+        elif choice == "metadata":
+            metadata_sources = [source.label for source in SOURCE_CATALOG if source.mode == "metadata"]
+            await query.edit_message_text(
+                "ℹ️ These services provide metadata only. Audio downloads require official or licensed access:\n\n"
+                + "\n".join(metadata_sources),
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("↩️ Back", callback_data="filter:panel")]]),
+            )
         elif choice == "genre":
             genres = ["D&B", "House", "Vinahouse", "Bounce", "Dubstep", "SpeedHouse", "Custom"]
             await query.edit_message_reply_markup(reply_markup=InlineKeyboardMarkup([
@@ -315,6 +332,10 @@ def create_application(config: Config) -> Application:
         if not query or query.from_user.id != context.user_data.get("search_owner"):
             return
         source = (query.data or "").split(":", 1)[1]
+        definition = source_definition(source)
+        if not definition or definition.mode != "search":
+            await query.answer("Use a public URL for this source; keyword search is not enabled yet.", show_alert=True)
+            return
         await query.answer()
         await run_filtered_search(update, context, source=source)
 
@@ -422,7 +443,7 @@ def create_application(config: Config) -> Application:
     application.add_handler(CallbackQueryHandler(next_handler, pattern=r"^next:\d+$"))
     application.add_handler(CallbackQueryHandler(language_callback, pattern=r"^lang:(en|my|zh)$"))
     application.add_handler(CallbackQueryHandler(filter_panel_handler, pattern=r"^filters$"))
-    application.add_handler(CallbackQueryHandler(filter_choice_handler, pattern=r"^filter:(source|genre|panel|back)$"))
+    application.add_handler(CallbackQueryHandler(filter_choice_handler, pattern=r"^filter:(source|genre|urls|metadata|panel|back)$"))
     application.add_handler(CallbackQueryHandler(source_handler, pattern=r"^source:(youtube|soundcloud)$"))
     application.add_handler(CallbackQueryHandler(genre_handler, pattern=r"^genre:(D&B|House|Vinahouse|Bounce|Dubstep|SpeedHouse|Custom)$"))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
