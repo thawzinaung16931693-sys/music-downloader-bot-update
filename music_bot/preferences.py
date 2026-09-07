@@ -10,15 +10,11 @@ class Preferences:
     def __init__(self, path: Path):
         self.path = path
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with sqlite3.connect(self.path) as db:
-            db.execute(
-                "CREATE TABLE IF NOT EXISTS user_preferences ("
-                "user_id INTEGER PRIMARY KEY, language TEXT NOT NULL DEFAULT 'en', "
-                "bitrate INTEGER NOT NULL DEFAULT 320, source TEXT NOT NULL DEFAULT 'youtube')"
-            )
+        with self._connect():
+            pass
 
     def get(self, user_id: int) -> dict[str, str | int]:
-        with sqlite3.connect(self.path) as db:
+        with self._connect() as db:
             row = db.execute(
                 "SELECT language, bitrate, source FROM user_preferences WHERE user_id = ?",
                 (user_id,),
@@ -35,9 +31,18 @@ class Preferences:
             raise ValueError("Unsupported bitrate")
         if settings["source"] not in {"youtube", "soundcloud"}:
             raise ValueError("Unsupported source")
-        with sqlite3.connect(self.path) as db:
+        with self._connect() as db:
             db.execute(
                 "INSERT INTO user_preferences(user_id, language, bitrate, source) VALUES (?, ?, ?, ?) "
                 "ON CONFLICT(user_id) DO UPDATE SET language=excluded.language, bitrate=excluded.bitrate, source=excluded.source",
                 (user_id, settings["language"], settings["bitrate"], settings["source"]),
             )
+
+    def _connect(self) -> sqlite3.Connection:
+        db = sqlite3.connect(self.path)
+        db.execute(
+            "CREATE TABLE IF NOT EXISTS user_preferences ("
+            "user_id INTEGER PRIMARY KEY, language TEXT NOT NULL DEFAULT 'en', "
+            "bitrate INTEGER NOT NULL DEFAULT 320, source TEXT NOT NULL DEFAULT 'youtube')"
+        )
+        return db

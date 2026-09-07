@@ -23,7 +23,9 @@ find /tmp -maxdepth 1 -type d -name 'music-bot-*' -mmin "+$MAX_AGE_MINUTES" -pri
 
 # Runtime is reserved for disposable bot artifacts. Never clean the app root.
 if [[ -d "$RUNTIME_DIR" ]]; then
-  find "$RUNTIME_DIR" -mindepth 1 -maxdepth 1 -mmin "+$MAX_AGE_MINUTES" -print -exec rm -rf -- {} +
+  find "$RUNTIME_DIR" -mindepth 1 -maxdepth 1 \
+    ! -name 'preferences.db' ! -name 'preferences.db-wal' ! -name 'preferences.db-shm' \
+    -mmin "+$MAX_AGE_MINUTES" -print -exec rm -rf -- {} +
 fi
 
 usage_percent="$(df --output=pcent "$APP_DIR" | tail -n 1 | tr -dc '0-9')"

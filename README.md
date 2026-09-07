@@ -182,6 +182,8 @@ do not support rich custom-emoji entities.
 User preferences are available through `/settings` and the persistent `⚙️ Settings`
 button. Language, bitrate, and preferred searchable source are stored per user in
 `runtime/preferences.db` and survive service restarts.
+The storage cleanup explicitly preserves this database and its SQLite journal files;
+the preference store also recreates its schema safely if the database is missing.
 
 ## Tests
 
