@@ -125,3 +125,11 @@ def test_audius_adapter_accepts_track_and_rejects_profile() -> None:
     validate_audius_track_url("https://audius.co/artist/track-name")
     with pytest.raises(DownloadError, match="one Audius track"):
         validate_audius_track_url("https://audius.co/artist")
+
+
+def test_hearthis_adapter_accepts_track_and_rejects_discovery() -> None:
+    from music_bot.providers.hearthis import validate_hearthis_track_url
+
+    validate_hearthis_track_url("https://hearthis.at/dj/track-name/")
+    with pytest.raises(DownloadError, match="one HearThis.at track"):
+        validate_hearthis_track_url("https://hearthis.at/discover/")

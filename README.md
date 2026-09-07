@@ -144,6 +144,10 @@ Audius public track URLs use the same direct-link flow. Artist/profile pages are
 rejected; send a single track URL and use only tracks the uploader permits you to
 download.
 
+HearThis.at track URLs are also validated as single-track direct links. Profile,
+search, charts, and discovery pages are rejected; the uploader must permit the
+download.
+
 ## Universal downloader fallback
 
 The optional MIT-licensed project
