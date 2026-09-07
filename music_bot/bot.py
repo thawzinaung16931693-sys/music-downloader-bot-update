@@ -45,9 +45,9 @@ HELP_TEXTS = {
 }
 SEARCH_PAGE_SIZE = 5
 LANGUAGES = {
-    "en": {"name": "English", "search": "Search", "help": "Help", "language": "Language"},
-    "my": {"name": "မြန်မာ", "search": "ရှာဖွေရန်", "help": "အကူအညီ", "language": "ဘာသာစကား"},
-    "zh": {"name": "中文", "search": "搜索音乐", "help": "帮助", "language": "语言"},
+    "en": {"name": "English", "search": "Search", "ai_search": "AI Search", "help": "Help", "language": "Language"},
+    "my": {"name": "မြန်မာ", "search": "ရှာဖွေရန်", "ai_search": "AI ရှာဖွေရန်", "help": "အကူအညီ", "language": "ဘာသာစကား"},
+    "zh": {"name": "中文", "search": "搜索音乐", "ai_search": "AI 搜索", "help": "帮助", "language": "语言"},
 }
 BOT_COMMANDS = [
     BotCommand("start", "Start the music bot"),
@@ -57,6 +57,7 @@ BOT_COMMANDS = [
     BotCommand("title", "Search by song title"),
     BotCommand("artist", "Search by artist name"),
     BotCommand("language", "Choose interface language"),
+    BotCommand("menu", "Show the music keyboard"),
 ]
 
 
@@ -77,6 +78,10 @@ def create_application(config: Config) -> Application:
     async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if update.message:
             await update.message.reply_text(HELP_TEXTS[_language(context)], parse_mode="HTML", disable_web_page_preview=True, reply_markup=_menu(context))
+
+    async def menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        if update.message:
+            await update.message.reply_text("🎛️ Music controls are ready below.", reply_markup=_menu(context))
 
     async def language_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if update.message:
@@ -154,6 +159,7 @@ def create_application(config: Config) -> Application:
             await language_handler(update, context)
             return
         if message.text in {value["search"] for value in LANGUAGES.values()} | {f"🔎 {value['search']}" for value in LANGUAGES.values()}:
+            context.user_data["ai_search_mode"] = False
             await message.reply_text("🔎 Send a song, artist, or music link.", reply_markup=_menu(context))
             return
         if message.text in {value["ai_search"] for value in LANGUAGES.values()} | {f"🤖 {value['ai_search']}" for value in LANGUAGES.values()}:
@@ -298,6 +304,7 @@ def create_application(config: Config) -> Application:
 
     application.add_handler(CommandHandler(["start", "help"], help_handler))
     application.add_handler(CommandHandler("language", language_handler))
+    application.add_handler(CommandHandler("menu", menu_handler))
     application.add_handler(CommandHandler("search", search_command))
     application.add_handler(CommandHandler("aisearch", ai_search_command))
     application.add_handler(CommandHandler(["title", "artist"], field_command))
@@ -355,7 +362,7 @@ def _language(context: ContextTypes.DEFAULT_TYPE) -> str:
 def _menu(context: ContextTypes.DEFAULT_TYPE) -> ReplyKeyboardMarkup:
     labels = LANGUAGES.get(context.user_data.get("language", "en"), LANGUAGES["en"])
     return ReplyKeyboardMarkup(
-        [[f"🔎 {labels['search']}", f"❓ {labels['help']}"], [f"🌐 {labels['language']}"],],
+        [[f"🔎 {labels['search']}", f"🤖 {labels['ai_search']}"], [f"❓ {labels['help']}", f"🌐 {labels['language']}"],],
         resize_keyboard=True,
         is_persistent=True,
     )
