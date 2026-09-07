@@ -273,7 +273,23 @@ def create_application(config: Config) -> Application:
                 f"⬇️ <b>Preparing download</b>\n{escape(result.artist)} - {escape(result.title)}",
                 parse_mode="HTML",
             )
+        context.user_data["fallback_query"] = f"{result.artist} {result.title}"
         await download_url(update, context, result.url, reply_to=query.message.message_id)
+
+    async def fallback_source_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        query = update.callback_query
+        if not query:
+            return
+        if query.from_user.id != context.user_data.get("search_owner"):
+            await query.answer("Run your own search to use a fallback source.", show_alert=True)
+            return
+        fallback_query = context.user_data.get("fallback_query")
+        if not fallback_query:
+            await query.answer("The fallback search has expired.", show_alert=True)
+            return
+        context.user_data["search_query"] = fallback_query
+        await query.answer()
+        await run_filtered_search(update, context, source="soundcloud")
 
     async def next_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
@@ -484,7 +500,15 @@ def create_application(config: Config) -> Application:
                         await message.reply_document(csv_file, caption="📊 DJ metadata (CSV)")
             await status.delete()
         except DownloadError as exc:
-            await status.edit_text(f"⚠️ {escape(str(exc))}", parse_mode="HTML")
+            provider = detect_provider(url)
+            markup = None
+            if provider and provider.key == "youtube" and context.user_data.get("fallback_query"):
+                markup = InlineKeyboardMarkup([[
+                    InlineKeyboardButton("☁️ Try SoundCloud", callback_data="fallback:soundcloud")
+                ]])
+            await status.edit_text(
+                f"⚠️ {escape(str(exc))}", parse_mode="HTML", reply_markup=markup
+            )
         except Exception:
             LOGGER.exception("Unexpected failure while downloading %s", url)
             await status.edit_text("❌ An unexpected error occurred while downloading.")
@@ -501,6 +525,7 @@ def create_application(config: Config) -> Application:
     application.add_handler(CallbackQueryHandler(language_callback, pattern=r"^lang:(en|my|zh)$"))
     application.add_handler(CallbackQueryHandler(settings_callback, pattern=r"^settings:(bitrate|source|back)$"))
     application.add_handler(CallbackQueryHandler(setting_callback, pattern=r"^set:(bitrate|source):.+$"))
+    application.add_handler(CallbackQueryHandler(fallback_source_handler, pattern=r"^fallback:soundcloud$"))
     application.add_handler(CallbackQueryHandler(filter_panel_handler, pattern=r"^filters$"))
     application.add_handler(CallbackQueryHandler(filter_choice_handler, pattern=r"^filter:(source|genre|urls|metadata|panel|back)$"))
     application.add_handler(CallbackQueryHandler(source_handler, pattern=r"^source:(youtube|soundcloud)$"))

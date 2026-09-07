@@ -140,6 +140,9 @@ metadata-only instead of being sent to a downloader.
 Download failures now identify the detected provider and distinguish hidden or
 unavailable results from general provider errors. The bot suggests another
 permitted source when appropriate.
+When a selected YouTube result fails, the bot offers `☁️ Try SoundCloud`. This runs
+a new source search for the selected artist/title and lets the user choose; the bot
+never silently substitutes another recording.
 
 Bandcamp direct links now use a provider adapter. Send a single public track URL
 such as `https://artist.bandcamp.com/track/name`; album and artist pages are rejected
