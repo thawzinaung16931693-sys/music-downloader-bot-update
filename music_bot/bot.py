@@ -22,6 +22,7 @@ from .ai_parser import AIParser, provider_query
 from .audio_analysis import analyze_audio
 from .downloader import DownloadError, SearchResult, download_track, extract_url, search_tracks
 from .metadata import enrich_metadata
+from .exports import metadata_record, write_metadata_exports
 
 LOGGER = logging.getLogger(__name__)
 HELP_TEXT = (
@@ -287,6 +288,10 @@ def create_application(config: Config) -> Application:
                         title=track.title,
                         artist=track.artist,
                     )
+                    record = metadata_record(title=track.title, artist=track.artist, analysis=analysis)
+                    json_path, csv_path = await asyncio.to_thread(
+                        write_metadata_exports, Path(temp_dir), record
+                    )
                     await status.edit_text("✅ <b>Track ready</b>\n⬆️ Uploading MP3...", parse_mode="HTML")
                     await message.chat.send_action(ChatAction.UPLOAD_DOCUMENT)
                     with track.path.open("rb") as audio_file:
@@ -295,6 +300,10 @@ def create_application(config: Config) -> Application:
                             duration=track.duration or None,
                             caption=_analysis_caption(track.artist, track.title, analysis),
                         )
+                    with json_path.open("rb") as json_file:
+                        await message.reply_document(json_file, caption="📋 DJ metadata (JSON)")
+                    with csv_path.open("rb") as csv_file:
+                        await message.reply_document(csv_file, caption="📊 DJ metadata (CSV)")
             await status.delete()
         except DownloadError as exc:
             await status.edit_text(f"⚠️ {escape(str(exc))}", parse_mode="HTML")
