@@ -128,11 +128,13 @@ def create_application(config: Config) -> Application:
     async def search_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         message = update.message
         if message:
+            context.user_data["ai_search_mode"] = False
             await show_search_results(update, context, message.text.partition(" ")[2], "search")
 
     async def ai_search_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         message = update.message
         if message:
+            context.user_data["ai_search_mode"] = False
             await show_search_results(update, context, message.text.partition(" ")[2], "search", True)
 
     async def field_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -154,11 +156,17 @@ def create_application(config: Config) -> Application:
         if message.text in {value["search"] for value in LANGUAGES.values()} | {f"🔎 {value['search']}" for value in LANGUAGES.values()}:
             await message.reply_text("🔎 Send a song, artist, or music link.", reply_markup=_menu(context))
             return
+        if message.text in {value["ai_search"] for value in LANGUAGES.values()} | {f"🤖 {value['ai_search']}" for value in LANGUAGES.values()}:
+            context.user_data["ai_search_mode"] = True
+            await message.reply_text("🤖 Describe your DJ search, for example: energetic house between 120-124 bpm", reply_markup=_menu(context))
+            return
         url = extract_url(message.text)
         if url:
+            context.user_data["ai_search_mode"] = False
             await download_url(update, context, url)
         else:
-            await show_search_results(update, context, message.text, "search")
+            use_ai = bool(context.user_data.pop("ai_search_mode", False))
+            await show_search_results(update, context, message.text, "search", use_ai)
 
     async def pick_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query

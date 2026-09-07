@@ -91,6 +91,10 @@ click one to download that specific result. Plain text without a URL is treated 
 a general keyword search.
 The same commands are registered in Telegram's command menu, available from the
 slash button in the chat.
+The persistent keyboard also includes `🤖 AI Search`, separate from normal YouTube
+`🔎 Search`.
+Tap `🤖 AI Search`, then send a natural-language DJ request. Tap `🔎 Search` for a
+normal YouTube keyword search.
 
 Use `/language` or the persistent `🌐 Language` button to switch the interface
 between English, Burmese, and Chinese. Search results include thumbnails when the
