@@ -107,8 +107,12 @@ def create_application(config: Config) -> Application:
         try:
             parsed = await asyncio.to_thread(ai_parser.parse, query) if use_ai else None
             intent = parsed.intent if parsed else None
-            if use_ai and parsed and not parsed.used_ai:
-                await status.edit_text("⚠️ AI search is temporarily unavailable. Using local DJ search instead...")
+            if use_ai and parsed:
+                if parsed.used_ai:
+                    await status.edit_text("🤖 AI understood your DJ request. Searching matching tracks...")
+                else:
+                    reason = "timed out" if parsed.fallback_reason == "timeout" else "is unavailable"
+                    await status.edit_text(f"⚠️ AI {reason}. Using local DJ parsing instead...")
             results = await asyncio.to_thread(
                 search_tracks,
                 provider_query(intent) if intent else query,

@@ -39,7 +39,8 @@ seconds of a track, which gives tempo and key detection enough musical context
 without making every download unnecessarily slow. Values are marked unknown when
 confidence or source data is insufficient.
 AI search reports whether the remote parser was used; endpoint failures explicitly
-fall back to local DJ parsing.
+fall back to local DJ parsing. `AI_TIMEOUT_SECONDS` defaults to 45 seconds for
+slower compatible endpoints.
 
 ## Requirements
 

@@ -11,9 +11,10 @@ from .dj_models import SearchIntent
 
 
 class ParseResult:
-    def __init__(self, intent: SearchIntent, used_ai: bool):
+    def __init__(self, intent: SearchIntent, used_ai: bool, fallback_reason: str | None = None):
         self.intent = intent
         self.used_ai = used_ai
+        self.fallback_reason = fallback_reason
 
 
 class AIParser:
@@ -23,6 +24,7 @@ class AIParser:
         self.endpoint = endpoint or os.getenv("AI_API_BASE_URL")
         self.api_key = api_key or os.getenv("AI_API_KEY")
         self.model = model or os.getenv("AI_MODEL", "gpt-4o-mini")
+        self.timeout = float(os.getenv("AI_TIMEOUT_SECONDS", "45"))
 
     def parse(self, query: str) -> ParseResult:
         query = " ".join(query.split()).strip()
@@ -31,9 +33,11 @@ class AIParser:
         if self.endpoint and self.api_key:
             try:
                 return ParseResult(self._parse_remote(query), True)
+            except httpx.TimeoutException:
+                return ParseResult(parse_locally(query), False, "timeout")
             except (httpx.HTTPError, KeyError, TypeError, ValueError, json.JSONDecodeError):
-                pass
-        return ParseResult(parse_locally(query), False)
+                return ParseResult(parse_locally(query), False, "invalid_response")
+        return ParseResult(parse_locally(query), False, "not_configured")
 
     def _parse_remote(self, query: str) -> SearchIntent:
         endpoint = urljoin(self.endpoint.rstrip("/") + "/", "chat/completions")
@@ -50,7 +54,7 @@ class AIParser:
                     f"Query: {query}"
                 )}],
             },
-            timeout=15,
+            timeout=self.timeout,
         )
         response.raise_for_status()
         values = json.loads(response.json()["choices"][0]["message"]["content"])
