@@ -131,6 +131,11 @@ def create_application(config: Config) -> Application:
                 field=field,
                 max_duration=min(config.max_duration_seconds, 900),
                 cookies_file=config.cookies_file,
+                source=(
+                    preferences.get(update.effective_user.id)["source"]
+                    if update.effective_user
+                    else "youtube"
+                ),
             )
             if not results:
                 raise DownloadError("No results under 15 minutes were found. Try another keyword.")
