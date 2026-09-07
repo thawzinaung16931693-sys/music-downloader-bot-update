@@ -24,6 +24,7 @@ from .downloader import DownloadError, SearchResult, download_track, extract_url
 from .metadata import enrich_metadata
 from .exports import metadata_record, write_metadata_exports
 from .source_catalog import SOURCE_CATALOG, source_definition
+from .preferences import Preferences
 
 LOGGER = logging.getLogger(__name__)
 HELP_TEXT = (
@@ -76,6 +77,7 @@ def create_application(config: Config) -> Application:
     )
     semaphore = asyncio.Semaphore(config.download_workers)
     ai_parser = AIParser()
+    preferences = Preferences(Path("runtime/preferences.db"))
 
     async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if update.message:
@@ -84,6 +86,14 @@ def create_application(config: Config) -> Application:
     async def menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if update.message:
             await update.message.reply_text("🎛️ Music controls are ready below.", reply_markup=_menu(context))
+
+    async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        if update.message and update.effective_user:
+            await update.message.reply_text(
+                _settings_text(preferences.get(update.effective_user.id)),
+                parse_mode="HTML",
+                reply_markup=_settings_markup(),
+            )
 
     async def language_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if update.message:
@@ -129,6 +139,8 @@ def create_application(config: Config) -> Application:
             context.user_data["search_field"] = field
             context.user_data["search_use_ai"] = use_ai
             context.user_data["search_source"] = "youtube"
+            if update.effective_user:
+                context.user_data["search_source"] = preferences.get(update.effective_user.id)["source"]
             context.user_data["search_genre"] = None
             context.user_data["search_owner"] = update.effective_user.id if update.effective_user else None
             first = results[0] if results else None
@@ -219,6 +231,9 @@ def create_application(config: Config) -> Application:
             context.user_data["ai_search_mode"] = True
             await message.reply_text("🤖 Describe your DJ search, for example: energetic house between 120-124 bpm", reply_markup=_menu(context))
             return
+        if message.text == "⚙️ Settings":
+            await settings_handler(update, context)
+            return
         url = extract_url(message.text)
         if url:
             context.user_data["ai_search_mode"] = False
@@ -273,9 +288,34 @@ def create_application(config: Config) -> Application:
             return
         language = (query.data or "").split(":", 1)[1]
         context.user_data["language"] = language
+        preferences.set(query.from_user.id, language=language)
         await query.answer()
         await query.edit_message_text(f"✅ Language: {LANGUAGES[language]['name']}")
         await query.message.reply_text("🔎 Send a song, artist, or music link.", reply_markup=_menu(context))
+
+    async def settings_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        query = update.callback_query
+        if not query:
+            return
+        action = (query.data or "").split(":", 1)[1]
+        if action == "back":
+            await query.answer()
+            await query.edit_message_text(_settings_text(preferences.get(query.from_user.id)), parse_mode="HTML", reply_markup=_settings_markup())
+            return
+        await query.answer()
+        options = [128, 192, 256, 320] if action == "bitrate" else ["youtube", "soundcloud"]
+        await query.edit_message_reply_markup(reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton(f"{value}{' kbps' if action == 'bitrate' else ''}", callback_data=f"set:{action}:{value}")]
+            for value in options
+        ] + [[InlineKeyboardButton("↩️ Back", callback_data="settings:back")]]))
+
+    async def setting_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        query = update.callback_query
+        if query:
+            kind, value = (query.data or "").split(":", 2)[1:]
+            preferences.set(query.from_user.id, **{kind: int(value) if kind == "bitrate" else value})
+            await query.answer("Setting saved")
+            await query.edit_message_text(_settings_text(preferences.get(query.from_user.id)), parse_mode="HTML", reply_markup=_settings_markup())
 
     async def filter_panel_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
@@ -382,7 +422,7 @@ def create_application(config: Config) -> Application:
                                 pass
 
                     download_task = asyncio.create_task(asyncio.to_thread(
-                        download_track, url, Path(temp_dir), quality=config.audio_quality,
+                        download_track, url, Path(temp_dir), quality=int(preferences.get(update.effective_user.id)["bitrate"]) if update.effective_user else config.audio_quality,
                         max_duration=config.max_duration_seconds,
                         max_file_size_mb=config.max_file_size_mb, cookies_file=config.cookies_file,
                         progress_callback=progress_hook,
@@ -436,12 +476,15 @@ def create_application(config: Config) -> Application:
     application.add_handler(CommandHandler(["start", "help"], help_handler))
     application.add_handler(CommandHandler("language", language_handler))
     application.add_handler(CommandHandler("menu", menu_handler))
+    application.add_handler(CommandHandler("settings", settings_handler))
     application.add_handler(CommandHandler("search", search_command))
     application.add_handler(CommandHandler("aisearch", ai_search_command))
     application.add_handler(CommandHandler(["title", "artist"], field_command))
     application.add_handler(CallbackQueryHandler(pick_handler, pattern=r"^pick:\d+$"))
     application.add_handler(CallbackQueryHandler(next_handler, pattern=r"^next:\d+$"))
     application.add_handler(CallbackQueryHandler(language_callback, pattern=r"^lang:(en|my|zh)$"))
+    application.add_handler(CallbackQueryHandler(settings_callback, pattern=r"^settings:(bitrate|source|back)$"))
+    application.add_handler(CallbackQueryHandler(setting_callback, pattern=r"^set:(bitrate|source):.+$"))
     application.add_handler(CallbackQueryHandler(filter_panel_handler, pattern=r"^filters$"))
     application.add_handler(CallbackQueryHandler(filter_choice_handler, pattern=r"^filter:(source|genre|urls|metadata|panel|back)$"))
     application.add_handler(CallbackQueryHandler(source_handler, pattern=r"^source:(youtube|soundcloud)$"))
@@ -518,10 +561,24 @@ def _language(context: ContextTypes.DEFAULT_TYPE) -> str:
 def _menu(context: ContextTypes.DEFAULT_TYPE) -> ReplyKeyboardMarkup:
     labels = LANGUAGES.get(context.user_data.get("language", "en"), LANGUAGES["en"])
     return ReplyKeyboardMarkup(
-        [[f"🔎 {labels['search']}", f"🤖 {labels['ai_search']}"], [f"❓ {labels['help']}", f"🌐 {labels['language']}"],],
+        [[f"🔎 {labels['search']}", f"🤖 {labels['ai_search']}"], [f"❓ {labels['help']}", "⚙️ Settings"], [f"🌐 {labels['language']}"],],
         resize_keyboard=True,
         is_persistent=True,
     )
+
+
+def _settings_markup() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🎚️ Bitrate", callback_data="settings:bitrate")],
+        [InlineKeyboardButton("🌐 Preferred source", callback_data="settings:source")],
+    ])
+
+
+def _settings_text(settings: dict[str, str | int]) -> str:
+    return ("⚙️ <b>Your DJ settings</b>\n\n"
+            f"🌐 Language: <code>{settings['language']}</code>\n"
+            f"🎚️ Bitrate: <code>{settings['bitrate']} kbps</code>\n"
+            f"🔗 Source: <code>{settings['source']}</code>")
 
 
 def main() -> None:
