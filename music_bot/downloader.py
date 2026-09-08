@@ -152,7 +152,10 @@ def apply_advanced_filters(
 
     version = filters.get("version")
     if version:
-        filtered = [result for result in filtered if result.version.casefold() == version.casefold()]
+        filtered = [
+            result for result in filtered
+            if (result.version or detect_track_version(result.title)).casefold() == version.casefold()
+        ]
     return filtered
 
 
