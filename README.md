@@ -121,6 +121,8 @@ Popularity is treated only as a soft search preference unless a provider supplie
 verified engagement data.
 Use `/help` for the short guide to all search commands, filters, navigation, settings,
 and exported files.
+Command-menu rate limits do not stop the bot; the existing Telegram menu remains
+available and is retried on the next service restart.
 Tap `🤖 AI Search`, then send a natural-language DJ request. Tap `🔎 Search` for a
 normal YouTube keyword search.
 

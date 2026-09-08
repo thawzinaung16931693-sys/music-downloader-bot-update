@@ -17,6 +17,7 @@ from telegram.ext import (
     filters,
 )
 from telegram.request import HTTPXRequest
+from telegram.error import RetryAfter, TelegramError
 
 from .config import Config
 from .ai_parser import AIParser, provider_query
@@ -74,8 +75,13 @@ BOT_COMMANDS = [
 
 def create_application(config: Config) -> Application:
     async def configure_command_menu(application: Application) -> None:
-        await application.bot.set_my_commands(BOT_COMMANDS)
-        LOGGER.info("Telegram command menu configured")
+        try:
+            await application.bot.set_my_commands(BOT_COMMANDS)
+            LOGGER.info("Telegram command menu configured")
+        except RetryAfter as exc:
+            LOGGER.warning("Telegram command menu rate-limited for %s seconds; keeping existing menu", exc.retry_after)
+        except TelegramError:
+            LOGGER.exception("Could not update Telegram command menu; continuing startup")
 
     application = (
         Application.builder()
