@@ -166,10 +166,42 @@ def parse_locally(query: str) -> SearchIntent:
 
 
 def _intent_from_values(query: str, values: dict[str, object]) -> SearchIntent:
-    allowed_keys = {"artist", "title", "genre", "mood", "min_bpm", "max_bpm", "instrumental", "max_duration"}
-    values = {key: value for key, value in values.items() if key in allowed_keys and value is not None}
-    values["max_duration"] = min(int(values.get("max_duration", 900)), 900)
-    return SearchIntent(raw_query=query, **values)
+    if not isinstance(values, dict):
+        raise ValueError("AI intent must be a JSON object")
+    normalized: dict[str, object] = {}
+    for key in ("artist", "title", "genre", "mood"):
+        value = values.get(key)
+        if value is not None:
+            if not isinstance(value, str):
+                raise ValueError(f"{key} must be text")
+            value = " ".join(value.split()).strip()
+            if value:
+                normalized[key] = value[:100]
+
+    for key in ("min_bpm", "max_bpm"):
+        value = values.get(key)
+        if value is not None:
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise ValueError(f"{key} must be a number")
+            value = float(value)
+            if not 40 <= value <= 240:
+                raise ValueError(f"{key} must be between 40 and 240")
+            normalized[key] = value
+    if normalized.get("min_bpm") and normalized.get("max_bpm"):
+        if normalized["min_bpm"] > normalized["max_bpm"]:
+            raise ValueError("min_bpm cannot exceed max_bpm")
+
+    instrumental = values.get("instrumental")
+    if instrumental is not None:
+        if not isinstance(instrumental, bool):
+            raise ValueError("instrumental must be true or false")
+        normalized["instrumental"] = instrumental
+
+    duration = values.get("max_duration", 900)
+    if isinstance(duration, bool) or not isinstance(duration, (int, float)):
+        raise ValueError("max_duration must be a number")
+    normalized["max_duration"] = min(max(int(duration), 1), 900)
+    return SearchIntent(raw_query=query, **normalized)
 
 
 def provider_query(intent: SearchIntent) -> str:

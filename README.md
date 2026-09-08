@@ -103,6 +103,10 @@ The persistent keyboard also includes `🤖 AI Search`, separate from normal You
 `🔎 Search`.
 AI Search first shows an interpretation preview with `✅ Search exactly` and
 `✏️ Edit request`; provider search does not start until the user confirms.
+AI output is validated before the preview: unknown fields are ignored, text is
+normalized and length-limited, BPM must be between 40 and 240, minimum BPM cannot
+exceed maximum BPM, duration is limited to 15 minutes, and malformed responses use
+the local parser fallback.
 Use `/help` for the short guide to all search commands, filters, navigation, settings,
 and exported files.
 Tap `🤖 AI Search`, then send a natural-language DJ request. Tap `🔎 Search` for a

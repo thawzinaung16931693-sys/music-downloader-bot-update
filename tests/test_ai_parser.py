@@ -1,6 +1,8 @@
 import asyncio
 
-from music_bot.ai_parser import AIParser, parse_locally, provider_query
+import pytest
+
+from music_bot.ai_parser import AIParser, _intent_from_values, parse_locally, provider_query
 
 
 def test_local_dj_query_parsing() -> None:
@@ -50,3 +52,19 @@ def test_gemini_endpoint_url_is_supported() -> None:
         os.environ.pop("AI_PROVIDER", None)
     else:
         os.environ["AI_PROVIDER"] = previous
+
+
+def test_intent_validation_rejects_invalid_bpm_range() -> None:
+    with pytest.raises(ValueError, match="between 40 and 240"):
+        _intent_from_values("test", {"min_bpm": 999})
+    with pytest.raises(ValueError, match="cannot exceed"):
+        _intent_from_values("test", {"min_bpm": 130, "max_bpm": 120})
+
+
+def test_intent_validation_normalizes_and_limits_fields() -> None:
+    intent = _intent_from_values(
+        "test", {"artist": "  Vini   Vici ", "max_duration": 5000, "instrumental": True}
+    )
+    assert intent.artist == "Vini Vici"
+    assert intent.max_duration == 900
+    assert intent.instrumental is True
