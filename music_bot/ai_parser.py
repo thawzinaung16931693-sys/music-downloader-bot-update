@@ -177,6 +177,13 @@ def parse_locally(query: str) -> SearchIntent:
         values["max_duration"] = int(minutes.group(1)) * 60
     if re.search(r"\binstrumental|no vocals?\b", query, re.I):
         values["instrumental"] = True
+    lowered = query.casefold()
+    if re.search(r"\b(similar to|like this|similar tracks?)\b", lowered):
+        values["search_mode"] = "similar"
+    elif re.search(r"\b(music|songs?)\s+(by|from)\b|\bartist\b", lowered):
+        values["search_mode"] = "artist"
+    elif re.search(r"\b(genre|style|type)\b", lowered):
+        values["search_mode"] = "genre"
     return _intent_from_values(query, values)
 
 
@@ -251,6 +258,12 @@ def provider_query(intent: SearchIntent) -> str:
         parts.append(f"{bpm} bpm" if intent.max_bpm is None else f"{bpm}-{int(intent.max_bpm)} bpm")
     if intent.instrumental:
         parts.append("instrumental")
+    if intent.search_mode == "artist" and intent.artist:
+        parts.append("official music")
+    elif intent.search_mode == "genre" and intent.genre:
+        parts.append("DJ tracks")
+    elif intent.search_mode == "similar":
+        parts.append("similar tracks")
     return _dedupe_query_parts(parts)
 
 

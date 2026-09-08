@@ -112,6 +112,16 @@ def test_intent_validation_accepts_null_optional_duration() -> None:
     assert intent.max_duration == 900
 
 
+def test_local_parser_classifies_search_modes() -> None:
+    assert parse_locally("music by Vini Vici").search_mode == "artist"
+    assert parse_locally("house genre music").search_mode == "genre"
+    assert parse_locally("tracks similar to psytrance").search_mode == "similar"
+
+
+def test_provider_query_adds_mode_specific_hint() -> None:
+    assert "official music" in provider_query(_intent_from_values("Vini Vici", {"search_mode": "artist", "artist": "Vini Vici"}))
+
+
 def test_intent_validation_preserves_dj_context_fields() -> None:
     intent = _intent_from_values(
         "Popular Myanmar House Remix",

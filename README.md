@@ -116,6 +116,8 @@ normalized and length-limited, BPM must be between 40 and 240, minimum BPM canno
 exceed maximum BPM, duration is limited to 15 minutes, and malformed responses use
 the local parser fallback.
 The preview also shows the search mode: `track`, `artist`, `genre`, or `similar`.
+Artist mode adds an official-music hint, genre mode adds a DJ-track hint, and
+similar mode adds a similar-tracks hint while preserving the original query.
 The structured intent includes language, region, track version, and popularity.
 Popularity is treated only as a soft search preference unless a provider supplies
 verified engagement data.
