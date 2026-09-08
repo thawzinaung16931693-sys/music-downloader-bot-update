@@ -30,23 +30,28 @@ from .ui import emoji
 
 LOGGER = logging.getLogger(__name__)
 HELP_TEXT = (
-    "🎵 <b>Bar Lar Lar</b>\n"
+    "🎵 <b>Bar Lar Lar • Quick Guide</b>\n"
     "━━━━━━━━━━━━━━━━━━\n"
-    "Find a track and download it as a high-quality MP3.\n\n"
-    "🔎 <b>Search commands</b>\n"
-    "• /search artist and title (normal YouTube search)\n"
-    "• /aisearch DJ filters (AI-assisted search)\n"
-    "• /title song title\n"
-    "• /artist artist name\n\n"
-    "💬 Or send plain text, for example:\n"
-    "<code>Daft Punk One More Time</code>\n\n"
-    "🔗 Public SoundCloud, YouTube, Bandcamp, and other supported links also work.\n\n"
+    "🔎 <b>Search</b>\n"
+    "<code>/search artist title</code> • normal YouTube\n"
+    "<code>/aisearch DJ request</code> • AI: genre, BPM, mood, duration\n"
+    "<code>/title song title</code> • title search\n"
+    "<code>/artist artist name</code> • artist search\n"
+    "Or send keywords directly.\n\n"
+    "⚙️ <b>Results & filters</b>\n"
+    "Tap a result to download. Use <b>Next ➡️</b>/<b>⬅️ Previous</b> for more.\n"
+    "Tap <code>⚙️ Filters</code> for source, genre, BPM, duration, version, and quality.\n\n"
+    "🎛️ <b>Settings</b>\n"
+    "<code>/settings</code> • language, bitrate, source\n"
+    "<code>/language</code> • English, Burmese, Chinese\n"
+    "<code>/menu</code> • show keyboard\n\n"
+    "📋 Downloads include MP3, DJ JSON/CSV metadata, BPM, key, Camelot, and quality info.\n"
     "⚖️ Download only audio you have permission to use."
 )
 HELP_TEXTS = {
     "en": HELP_TEXT,
-    "my": "🎵 <b>Bar Lar Lar</b>\n━━━━━━━━━━━━━━━━━━\nသီချင်းအမည်၊ အဆိုတော် သို့မဟုတ် လင့်ခ် ပို့ပြီး MP3 ရယူပါ။\n\n🔎 /search အဆိုတော်နှင့် သီချင်းအမည်\n🎵 /title သီချင်းအမည်\n👤 /artist အဆိုတော်အမည်\n\n⚖️ ခွင့်ပြုချက်ရှိသော အသံဖိုင်များကိုသာ ဒေါင်းလုပ်လုပ်ပါ။",
-    "zh": "🎵 <b>Bar Lar Lar</b>\n━━━━━━━━━━━━━━━━━━\n发送歌曲名、歌手名或音乐链接，下载高质量 MP3。\n\n🔎 /search 歌手和歌曲名\n🎵 /title 歌曲名\n👤 /artist 歌手名\n\n⚖️ 请只下载您有权使用的音频。",
+    "my": "🎵 <b>Bar Lar Lar • အကူအညီ</b>\n━━━━━━━━━━━━━━━━━━\n🔎 <b>ရှာဖွေရန်</b>\n<code>/search အဆိုတော် သီချင်း</code> • YouTube ရှာဖွေမှု\n<code>/aisearch DJ တောင်းဆိုချက်</code> • AI ဖြင့် genre၊ BPM၊ mood၊ ကြာချိန်\n<code>/title သီချင်းအမည်</code> • သီချင်းအမည်ဖြင့်\n<code>/artist အဆိုတော်အမည်</code> • အဆိုတော်ဖြင့်\n\n⚙️ ရလဒ်ကိုနှိပ်ပြီး ဒေါင်းလုပ်လုပ်ပါ။ Next/Previous ဖြင့် ရလဒ်များကြည့်ပါ။ ⚙️ Filters တွင် source၊ genre၊ BPM၊ ကြာချိန်၊ version နှင့် quality ရွေးပါ။\n\n🎛️ <code>/settings</code> • ဘာသာစကား၊ bitrate၊ source\n<code>/language</code> • ဘာသာစကားရွေးရန်\n<code>/menu</code> • keyboard ပြရန်\n\n📋 MP3 နှင့် DJ JSON/CSV metadata ရရှိပါမည်။ ခွင့်ပြုချက်ရှိသော အသံဖိုင်များကိုသာ ဒေါင်းလုပ်လုပ်ပါ။",
+    "zh": "🎵 <b>Bar Lar Lar • 使用说明</b>\n━━━━━━━━━━━━━━━━━━\n🔎 <b>搜索</b>\n<code>/search 艺术家 歌曲</code> • 普通 YouTube 搜索\n<code>/aisearch DJ 搜索要求</code> • AI 解析风格、BPM、情绪、时长\n<code>/title 歌曲名</code> • 按歌曲名搜索\n<code>/artist 艺术家</code> • 按艺术家搜索\n\n⚙️ 点击结果下载，使用 Next/Previous 浏览更多。点击 ⚙️ Filters 可选择来源、风格、BPM、时长、版本和音质。\n\n🎛️ <code>/settings</code> • 语言、比特率、来源\n<code>/language</code> • 选择语言\n<code>/menu</code> • 显示键盘\n\n📋 下载包含 MP3 和 DJ JSON/CSV metadata。请只下载您有权使用的音频。",
 }
 SEARCH_PAGE_SIZE = 5
 LANGUAGES = {

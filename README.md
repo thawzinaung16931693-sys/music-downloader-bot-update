@@ -101,6 +101,8 @@ The same commands are registered in Telegram's command menu, available from the
 slash button in the chat.
 The persistent keyboard also includes `🤖 AI Search`, separate from normal YouTube
 `🔎 Search`.
+Use `/help` for the short guide to all search commands, filters, navigation, settings,
+and exported files.
 Tap `🤖 AI Search`, then send a natural-language DJ request. Tap `🔎 Search` for a
 normal YouTube keyword search.
 
