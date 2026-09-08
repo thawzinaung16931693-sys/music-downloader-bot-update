@@ -16,6 +16,7 @@ class ParseResult:
         self.intent = intent
         self.used_ai = used_ai
         self.fallback_reason = fallback_reason
+        self.confidence = interpretation_confidence(intent)
 
 
 def _decode_json_object(value: object) -> dict[str, object]:
@@ -28,6 +29,28 @@ def _decode_json_object(value: object) -> dict[str, object]:
     if not isinstance(decoded, dict):
         raise ValueError("AI response must be a JSON object")
     return decoded
+
+
+def interpretation_confidence(intent: SearchIntent) -> int:
+    """Estimate parser coverage without presenting it as model certainty."""
+    score = 35
+    if intent.artist:
+        score += 18
+    if intent.title:
+        score += 18
+    if intent.genre:
+        score += 8
+    if intent.language or intent.region:
+        score += 7
+    if intent.version:
+        score += 6
+    if intent.min_bpm is not None:
+        score += 4
+    if intent.mood:
+        score += 3
+    if intent.keywords:
+        score += 4
+    return min(100, score)
 
 
 class AIParser:

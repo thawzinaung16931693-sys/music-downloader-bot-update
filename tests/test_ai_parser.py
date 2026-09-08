@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from music_bot.ai_parser import AIParser, _decode_json_object, _intent_from_values, parse_locally, provider_query
+from music_bot.ai_parser import AIParser, _decode_json_object, _intent_from_values, interpretation_confidence, parse_locally, provider_query
 
 
 def test_local_dj_query_parsing() -> None:
@@ -110,6 +110,11 @@ def test_search_mode_accepts_provider_case_variation() -> None:
 def test_intent_validation_accepts_null_optional_duration() -> None:
     intent = _intent_from_values("test", {"max_duration": None})
     assert intent.max_duration == 900
+
+
+def test_interpretation_confidence_is_bounded() -> None:
+    assert 0 <= interpretation_confidence(parse_locally("house music")) <= 100
+    assert interpretation_confidence(_intent_from_values("test", {"artist": "Vini Vici", "title": "Track"})) > 60
 
 
 def test_local_parser_classifies_search_modes() -> None:

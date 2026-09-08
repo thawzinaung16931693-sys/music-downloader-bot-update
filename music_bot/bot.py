@@ -141,7 +141,7 @@ def create_application(config: Config) -> Application:
                     context.user_data["pending_ai_intent"] = parsed.intent
                     context.user_data["pending_ai_owner"] = update.effective_user.id if update.effective_user else None
                     await status.edit_text(
-                        _intent_preview(parsed.intent),
+                        _intent_preview(parsed.intent, parsed.confidence),
                         parse_mode="HTML",
                         reply_markup=InlineKeyboardMarkup([
                             [InlineKeyboardButton("✅ Search exactly", callback_data="ai_confirm")],
@@ -686,7 +686,7 @@ def _analysis_caption(artist: str, title: str, analysis) -> str:
     )
 
 
-def _intent_preview(intent) -> str:
+def _intent_preview(intent, confidence: int | None = None) -> str:
     def value(item) -> str:
         return escape(str(item)) if item not in (None, "") else "not specified"
 
@@ -695,6 +695,11 @@ def _intent_preview(intent) -> str:
         bpm = f"{intent.min_bpm:.0f}"
         if intent.max_bpm is not None and intent.max_bpm != intent.min_bpm:
             bpm += f"-{intent.max_bpm:.0f}"
+    confidence_line = f"🎯 Interpretation confidence: {confidence}%\n" if confidence is not None else ""
+    guidance = (
+        "⚠️ Review carefully: this request is broad. Add an artist, title, genre, or region.\n\n"
+        if confidence is not None and confidence < 60 else ""
+    )
     return (
         f"🤖 <b>AI interpretation</b>\n"
         f"━━━━━━━━━━━━━━━━━━\n"
@@ -710,6 +715,7 @@ def _intent_preview(intent) -> str:
         f"🥁 BPM: {bpm}\n"
         f"⏱️ Maximum duration: {intent.max_duration // 60} minutes\n"
         f"🎤 Instrumental: {value(intent.instrumental)}\n\n"
+        f"{confidence_line}{guidance}"
         "Please confirm before searching."
     )
 
