@@ -77,3 +77,8 @@ def test_json_decoder_accepts_gemini_markdown_fence() -> None:
 def test_intent_validation_rejects_invalid_keywords() -> None:
     with pytest.raises(ValueError, match="keywords"):
         _intent_from_values("test", {"keywords": "House"})
+
+
+def test_intent_validation_accepts_null_optional_duration() -> None:
+    intent = _intent_from_values("test", {"max_duration": None})
+    assert intent.max_duration == 900

@@ -220,6 +220,8 @@ def _intent_from_values(query: str, values: dict[str, object]) -> SearchIntent:
         normalized["instrumental"] = instrumental
 
     duration = values.get("max_duration", 900)
+    if duration is None:
+        duration = 900
     if isinstance(duration, bool) or not isinstance(duration, (int, float)):
         raise ValueError("max_duration must be a number")
     normalized["max_duration"] = min(max(int(duration), 1), 900)
