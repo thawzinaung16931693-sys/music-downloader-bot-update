@@ -10,6 +10,7 @@ from music_bot.downloader import (
     search_tracks,
     rank_search_results,
     apply_advanced_filters,
+    detect_track_version,
     remove_duplicate_results,
 )
 from unittest.mock import patch
@@ -97,6 +98,13 @@ def test_advanced_filters_apply_after_broad_search() -> None:
     ]
     filtered = apply_advanced_filters(results, {"duration": "under 5 minutes", "version": "extended mix"})
     assert [result.url for result in filtered] == ["short"]
+
+
+def test_detect_track_version_classifies_dj_edits() -> None:
+    assert detect_track_version("Artist - Track (Extended Mix)") == "Extended Mix"
+    assert detect_track_version("Artist - Track [Instrumental]") == "Instrumental"
+    assert detect_track_version("Artist - Track (Radio Edit)") == "Radio Edit"
+    assert detect_track_version("Artist - Track") == "Original/Unknown"
 
 
 def test_duplicate_detection_preserves_distinct_versions() -> None:

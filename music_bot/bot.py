@@ -431,7 +431,7 @@ def create_application(config: Config) -> Application:
         options = {
             "bpm": [("120-124 BPM", "120-124 bpm"), ("125-128 BPM", "125-128 bpm"), ("129-135 BPM", "129-135 bpm")],
             "duration": [("Under 5 minutes", "under 5 minutes"), ("5-10 minutes", "5 to 10 minutes"), ("10-15 minutes", "10 to 15 minutes")],
-            "version": [("Remix", "remix"), ("Extended mix", "extended mix"), ("Instrumental", "instrumental"), ("Acapella", "acapella")],
+            "version": [("Remix", "Remix"), ("Extended mix", "Extended Mix"), ("Instrumental", "Instrumental"), ("Acapella", "Acapella")],
             "quality": [("320 kbps source", "320 kbps"), ("Lossless / FLAC", "lossless FLAC")],
         }
         await query.answer()
@@ -607,7 +607,7 @@ async def _edit_result_message(message, text: str, markup: InlineKeyboardMarkup 
 
 def _result_label(index: int, result: SearchResult) -> str:
     duration = f" [{result.duration // 60}:{result.duration % 60:02d}]" if result.duration else ""
-    label = f"🎵 {index + 1}. {result.artist} - {result.title} · {result.source}"
+    label = f"🎵 {index + 1}. {result.artist} - {result.title} · {result.version} · {result.source}"
     return label[:58] + duration
 
 

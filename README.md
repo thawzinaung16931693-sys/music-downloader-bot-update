@@ -127,6 +127,9 @@ Advanced filters are also available from `⚙️ Filters`: BPM range, duration, 
 (remix, extended mix, instrumental, or acapella), and source-quality preference.
 The bot performs a broad provider search first, then applies duration and version
 filters locally so provider-specific keyword syntax cannot hide valid results.
+Each result is classified as `Original/Unknown`, `Extended Mix`, `Club Mix`,
+`Radio Edit`, `Remix`, `Bootleg`, `Mashup`, `Instrumental`, `Acapella`, `Live`,
+`DJ Intro`, or `DJ Outro` when the provider metadata contains a matching label.
 
 The recommended implementation order is YouTube, SoundCloud, Bandcamp, Audius,
 HearThis.at, Jamendo, Free Music Archive, Internet Archive, ccMixter, then

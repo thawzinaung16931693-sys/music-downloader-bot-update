@@ -44,6 +44,7 @@ class SearchResult:
     duration: int
     thumbnail: str | None = None
     source: str = "YouTube"
+    version: str = "Unknown"
 
 
 def build_search_url(query: str, *, field: str = "search") -> str:
@@ -105,6 +106,7 @@ def search_tracks(
                 duration=duration,
                 thumbnail=entry.get("thumbnail"),
                 source=str(urlparse(str(result_url)).hostname or "Audio source"),
+                version=detect_track_version(str(entry.get("title") or "")),
             )
         )
     if not results:
@@ -134,17 +136,31 @@ def apply_advanced_filters(
 
     version = filters.get("version")
     if version:
-        version_terms = {
-            "remix": ("remix",),
-            "extended mix": ("extended mix", "extended"),
-            "instrumental": ("instrumental",),
-            "acapella": ("acapella", "a cappella"),
-        }.get(version, (version,))
-        filtered = [
-            result for result in filtered
-            if any(term in result.title.casefold() for term in version_terms)
-        ]
+        filtered = [result for result in filtered if result.version.casefold() == version.casefold()]
     return filtered
+
+
+def detect_track_version(title: str) -> str:
+    """Classify common DJ versions from provider title metadata."""
+    normalized = title.casefold()
+    labels = (
+        ("Acapella", ("acapella", "a cappella", "vocal only")),
+        ("Instrumental", ("instrumental", "instr")),
+        ("Extended Mix", ("extended mix", "extended")),
+        ("Club Mix", ("club mix", "club edit")),
+        ("Radio Edit", ("radio edit", "radio version")),
+        ("Remix", ("remix", "rework", "refix")),
+        ("Bootleg", ("bootleg", "edit")),
+        ("Mashup", ("mashup", "mash up")),
+        ("Live", ("live", "concert")),
+        ("DJ Intro", ("dj intro", "intro edit")),
+        ("DJ Outro", ("dj outro", "outro edit")),
+        ("Original Mix", ("original mix", "original version")),
+    )
+    for label, terms in labels:
+        if any(term in normalized for term in terms):
+            return label
+    return "Original/Unknown"
 
 
 def remove_duplicate_results(results: list[SearchResult]) -> list[SearchResult]:
