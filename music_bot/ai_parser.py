@@ -237,12 +237,19 @@ def provider_query(intent: SearchIntent) -> str:
         intent.artist, intent.title, intent.language, intent.region, intent.genre,
         intent.mood, intent.version, intent.popularity, *intent.keywords, intent.raw_query,
     ]
+    if _is_myanmar_intent(intent):
+        parts.extend(("Myanmar", "Burmese", "Myanmar DJ"))
     if intent.min_bpm is not None:
         bpm = str(int(intent.min_bpm))
         parts.append(f"{bpm} bpm" if intent.max_bpm is None else f"{bpm}-{int(intent.max_bpm)} bpm")
     if intent.instrumental:
         parts.append("instrumental")
     return " ".join(part for part in parts if part)
+
+
+def _is_myanmar_intent(intent: SearchIntent) -> bool:
+    values = " ".join(value or "" for value in (intent.language, intent.region, *intent.keywords, intent.raw_query)).casefold()
+    return "myanmar" in values or "burmese" in values or "မြန်မာ" in values
 
 
 def dj_source_plan(intent: SearchIntent) -> list[str]:

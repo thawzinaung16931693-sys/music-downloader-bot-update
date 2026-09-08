@@ -89,6 +89,16 @@ def test_rank_search_results_prefers_exact_audio_result() -> None:
     assert rank_search_results(results, "Daft Punk One More Time")[0].url == "audio"
 
 
+def test_rank_search_results_prefers_myanmar_evidence() -> None:
+    from music_bot.downloader import SearchResult
+
+    results = [
+        SearchResult("foreign", "Popular House Remix", "International Artist", 200),
+        SearchResult("myanmar", "Myanmar House Remix", "Burmese DJ", 200),
+    ]
+    assert rank_search_results(results, "Popular Myanmar House Remix")[0].url == "myanmar"
+
+
 def test_advanced_filters_apply_after_broad_search() -> None:
     from music_bot.downloader import SearchResult
 

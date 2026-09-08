@@ -214,6 +214,9 @@ def _result_score(result: SearchResult, tokens: set[str]) -> float:
         score -= 8.0
     if result.duration:
         score += 2.0
+    if {"myanmar", "burmese"} & tokens:
+        regional_terms = ("myanmar", "burmese", "မြန်မာ", "yangon", "mandalay")
+        score += 40.0 if any(term in haystack for term in regional_terms) else -35.0
     return score
 
 

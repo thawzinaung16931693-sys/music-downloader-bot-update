@@ -31,6 +31,13 @@ def test_provider_query_preserves_original_user_keywords() -> None:
     assert "Popular Myanmar House Remix" in provider_query(intent)
 
 
+def test_myanmar_intent_adds_regional_provider_terms() -> None:
+    query = provider_query(parse_locally("Popular Myanmar House Remix"))
+    assert "Myanmar" in query
+    assert "Burmese" in query
+    assert "Myanmar DJ" in query
+
+
 def test_async_parser_uses_local_fallback_without_credentials() -> None:
     result = asyncio.run(AIParser(endpoint=None, api_key=None).parse_async("house 124 bpm"))
     assert result.used_ai is False

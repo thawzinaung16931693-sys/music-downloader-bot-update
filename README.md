@@ -28,6 +28,8 @@ Parsed artist, title, genre, mood, BPM, and instrumental filters are converted i
 the provider search query while original user keywords are always preserved. For
 example, `Popular Myanmar House Remix` is not changed into an English-house
 recommendation.
+Myanmar/Burmese requests also receive regional query terms and regional results are
+ranked above generic international matches.
 AI configuration is optional and is documented in `.env.example`.
 
 `/search` performs a normal YouTube keyword search. `/aisearch` performs an
