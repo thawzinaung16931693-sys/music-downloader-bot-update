@@ -38,6 +38,17 @@ def test_myanmar_intent_adds_regional_provider_terms() -> None:
     assert "Myanmar DJ" in query
 
 
+def test_provider_query_does_not_duplicate_original_terms() -> None:
+    intent = _intent_from_values(
+        "Popular Myanmar House Remix",
+        {"region": "Myanmar", "genre": "House", "keywords": ["Remix", "Myanmar"]},
+    )
+    query = provider_query(intent)
+    assert query.startswith("Popular Myanmar House Remix")
+    assert query.split().count("Myanmar") == 1
+    assert query.split().count("House") == 1
+
+
 def test_async_parser_uses_local_fallback_without_credentials() -> None:
     result = asyncio.run(AIParser(endpoint=None, api_key=None).parse_async("house 124 bpm"))
     assert result.used_ai is False

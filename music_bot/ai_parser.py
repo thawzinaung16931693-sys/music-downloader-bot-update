@@ -234,8 +234,9 @@ def _intent_from_values(query: str, values: dict[str, object]) -> SearchIntent:
 def provider_query(intent: SearchIntent) -> str:
     """Turn parsed DJ intent into a provider-friendly search query."""
     parts = [
+        intent.raw_query,
         intent.artist, intent.title, intent.language, intent.region, intent.genre,
-        intent.mood, intent.version, intent.popularity, *intent.keywords, intent.raw_query,
+        intent.mood, intent.version, intent.popularity, *intent.keywords,
     ]
     if _is_myanmar_intent(intent):
         parts.extend(("Myanmar", "Burmese", "Myanmar DJ"))
@@ -244,7 +245,23 @@ def provider_query(intent: SearchIntent) -> str:
         parts.append(f"{bpm} bpm" if intent.max_bpm is None else f"{bpm}-{int(intent.max_bpm)} bpm")
     if intent.instrumental:
         parts.append("instrumental")
-    return " ".join(part for part in parts if part)
+    return _dedupe_query_parts(parts)
+
+
+def _dedupe_query_parts(parts: list[str | None]) -> str:
+    """Keep every meaningful phrase once while preserving the user's wording."""
+    result: list[str] = []
+    seen: set[str] = set()
+    for part in parts:
+        if not part:
+            continue
+        normalized = " ".join(part.split()).strip()
+        words = normalized.casefold().split()
+        if not normalized or all(word in seen for word in words):
+            continue
+        result.append(normalized)
+        seen.update(words)
+    return " ".join(result)
 
 
 def _is_myanmar_intent(intent: SearchIntent) -> bool:

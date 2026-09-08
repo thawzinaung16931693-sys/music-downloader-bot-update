@@ -30,6 +30,8 @@ example, `Popular Myanmar House Remix` is not changed into an English-house
 recommendation.
 Myanmar/Burmese requests also receive regional query terms and regional results are
 ranked above generic international matches.
+Structured terms and original keywords are de-duplicated before provider search;
+the original wording is retained without sending repeated copies of the same phrase.
 AI configuration is optional and is documented in `.env.example`.
 
 `/search` performs a normal YouTube keyword search. `/aisearch` performs an
