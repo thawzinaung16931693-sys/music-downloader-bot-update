@@ -128,7 +128,18 @@ def create_application(config: Config) -> Application:
             intent = parsed.intent if parsed else None
             if use_ai and parsed:
                 if parsed.used_ai:
-                    await status.edit_text(f"{emoji('bot')} AI understood your DJ request. Searching matching tracks...", parse_mode="HTML")
+                    context.user_data["pending_ai_query"] = query
+                    context.user_data["pending_ai_intent"] = parsed.intent
+                    context.user_data["pending_ai_owner"] = update.effective_user.id if update.effective_user else None
+                    await status.edit_text(
+                        _intent_preview(parsed.intent),
+                        parse_mode="HTML",
+                        reply_markup=InlineKeyboardMarkup([
+                            [InlineKeyboardButton("✅ Search exactly", callback_data="ai_confirm")],
+                            [InlineKeyboardButton("✏️ Edit request", callback_data="ai_edit")],
+                        ]),
+                    )
+                    return
                 else:
                     reason = "timed out" if parsed.fallback_reason == "timeout" else "is unavailable"
                     await status.edit_text(f"{emoji('warning')} AI {reason}. Using local DJ parsing instead...", parse_mode="HTML")
@@ -220,6 +231,42 @@ def create_application(config: Config) -> Application:
         if message:
             context.user_data["ai_search_mode"] = False
             await show_search_results(update, context, message.text.partition(" ")[2], "search", True)
+
+    async def ai_confirmation_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        query = update.callback_query
+        if not query or query.from_user.id != context.user_data.get("pending_ai_owner"):
+            return
+        action = query.data
+        if action == "ai_edit":
+            await query.answer()
+            await query.edit_message_text("✏️ Send your corrected DJ search request.")
+            context.user_data["ai_search_mode"] = True
+            return
+        intent = context.user_data.pop("pending_ai_intent", None)
+        original = context.user_data.pop("pending_ai_query", None)
+        if not intent or not original:
+            await query.answer("This interpretation expired. Search again.", show_alert=True)
+            return
+        await query.answer()
+        await query.edit_message_text("🔎 Searching the confirmed interpretation...")
+        try:
+            results = await asyncio.to_thread(
+                search_tracks,
+                provider_query(intent),
+                field="search",
+                max_duration=min(config.max_duration_seconds, 900),
+                cookies_file=config.cookies_file,
+                source=(preferences.get(query.from_user.id)["source"]),
+            )
+            context.user_data["search_results"] = results
+            context.user_data["search_query"] = original
+            context.user_data["search_use_ai"] = True
+            context.user_data["search_source"] = preferences.get(query.from_user.id)["source"]
+            context.user_data["search_owner"] = query.from_user.id
+            context.user_data["advanced_filters"] = {}
+            await _show_search_page(query.message, context, 0)
+        except DownloadError as exc:
+            await query.edit_message_text(f"⚠️ {escape(str(exc))}")
 
     async def field_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         message = update.message
@@ -559,6 +606,7 @@ def create_application(config: Config) -> Application:
     application.add_handler(CommandHandler("settings", settings_handler))
     application.add_handler(CommandHandler("search", search_command))
     application.add_handler(CommandHandler("aisearch", ai_search_command))
+    application.add_handler(CallbackQueryHandler(ai_confirmation_handler, pattern=r"^ai_(confirm|edit)$"))
     application.add_handler(CommandHandler(["title", "artist"], field_command))
     application.add_handler(CallbackQueryHandler(pick_handler, pattern=r"^pick:\d+$"))
     application.add_handler(CallbackQueryHandler(next_handler, pattern=r"^next:\d+$"))
@@ -629,6 +677,29 @@ def _analysis_caption(artist: str, title: str, analysis) -> str:
         f"📊 Quality score: {analysis.quality_score if analysis.quality_score is not None else '?'} / 100\n"
         f"{'⚠️ ' + ' '.join(analysis.warnings) if analysis.warnings else '✅ No quality warnings'}\n"
         f"{confidence}🎧 {analysis.quality_note or 'Quality checked'}"
+    )
+
+
+def _intent_preview(intent) -> str:
+    def value(item) -> str:
+        return escape(str(item)) if item not in (None, "") else "not specified"
+
+    bpm = "not specified"
+    if intent.min_bpm is not None:
+        bpm = f"{intent.min_bpm:.0f}"
+        if intent.max_bpm is not None and intent.max_bpm != intent.min_bpm:
+            bpm += f"-{intent.max_bpm:.0f}"
+    return (
+        f"🤖 <b>AI interpretation</b>\n"
+        f"━━━━━━━━━━━━━━━━━━\n"
+        f"👤 Artist: {value(intent.artist)}\n"
+        f"🎵 Title: {value(intent.title)}\n"
+        f"🎚️ Genre: {value(intent.genre)}\n"
+        f"😊 Mood: {value(intent.mood)}\n"
+        f"🥁 BPM: {bpm}\n"
+        f"⏱️ Maximum duration: {intent.max_duration // 60} minutes\n"
+        f"🎤 Instrumental: {value(intent.instrumental)}\n\n"
+        "Please confirm before searching."
     )
 
 
