@@ -694,6 +694,7 @@ def _intent_preview(intent) -> str:
         f"━━━━━━━━━━━━━━━━━━\n"
         f"👤 Artist: {value(intent.artist)}\n"
         f"🎵 Title: {value(intent.title)}\n"
+        f"🔎 Search mode: {value(intent.search_mode)}\n"
         f"🎚️ Genre: {value(intent.genre)}\n"
         f"🌐 Language: {value(intent.language)}\n"
         f"🌍 Region: {value(intent.region)}\n"

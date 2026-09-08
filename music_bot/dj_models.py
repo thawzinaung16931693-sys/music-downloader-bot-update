@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 @dataclass(frozen=True)
 class SearchIntent:
     raw_query: str
+    search_mode: str = "track"
     artist: str | None = None
     title: str | None = None
     genre: str | None = None

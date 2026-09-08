@@ -97,6 +97,12 @@ def test_intent_validation_rejects_invalid_keywords() -> None:
         _intent_from_values("test", {"keywords": "House"})
 
 
+def test_search_mode_is_validated() -> None:
+    assert _intent_from_values("test", {"search_mode": "artist"}).search_mode == "artist"
+    with pytest.raises(ValueError, match="search_mode"):
+        _intent_from_values("test", {"search_mode": "collection"})
+
+
 def test_intent_validation_accepts_null_optional_duration() -> None:
     intent = _intent_from_values("test", {"max_duration": None})
     assert intent.max_duration == 900

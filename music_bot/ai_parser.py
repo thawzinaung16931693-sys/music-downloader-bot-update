@@ -93,9 +93,9 @@ class AIParser:
                     "explicitly present in the user's query. Never translate, replace, broaden, "
                     "or invent a language, country, artist, title, genre, mood, or version. "
                     "Preserve terms such as Myanmar, Burmese, popular, house, remix, live, "
-                    "instrumental, and extended mix. Return JSON only with keys artist, title, "
+                    "instrumental, and extended mix. Return JSON only with keys search_mode, artist, title, "
                     "genre, mood, language, region, version, popularity, min_bpm, max_bpm, "
-                    "max_duration, instrumental, keywords. "
+                    "max_duration, instrumental, keywords. search_mode must be track, artist, genre, or similar. "
                     "Put important original terms that do not fit another field in keywords. "
                     "Use null or [] when absent. Original user query: "
                     f"{query}"
@@ -124,9 +124,9 @@ class AIParser:
                         "explicitly present in the user's query. Never translate, replace, broaden, "
                         "or invent a language, country, artist, title, genre, mood, or version. "
                         "Preserve terms such as Myanmar, Burmese, popular, house, remix, live, "
-                        "instrumental, and extended mix. Return JSON only with keys artist, title, "
+                        "instrumental, and extended mix. Return JSON only with keys search_mode, artist, title, "
                         "genre, mood, language, region, version, popularity, min_bpm, max_bpm, "
-                        "max_duration, instrumental, keywords. "
+                        "max_duration, instrumental, keywords. search_mode must be track, artist, genre, or similar. "
                         "Put important original terms that do not fit another field in keywords. "
                         "Use null or [] when absent. Original user query: "
                         f"{query}"
@@ -151,7 +151,7 @@ class AIParser:
                         "explicitly present in the user's query. Never translate, replace, broaden, "
                         "or invent a language, country, artist, title, genre, mood, or version. "
                         "Return JSON only with keys artist, title, genre, mood, language, region, "
-                        "version, popularity, min_bpm, max_bpm, max_duration, instrumental, "
+                        "search_mode, version, popularity, min_bpm, max_bpm, max_duration, instrumental, "
                         "keywords. Original user query: "
                         f"{query}"
                     )}]}],
@@ -184,6 +184,10 @@ def _intent_from_values(query: str, values: dict[str, object]) -> SearchIntent:
     if not isinstance(values, dict):
         raise ValueError("AI intent must be a JSON object")
     normalized: dict[str, object] = {}
+    search_mode = values.get("search_mode", "track")
+    if search_mode not in {"track", "artist", "genre", "similar"}:
+        raise ValueError("search_mode is invalid")
+    normalized["search_mode"] = search_mode
     keywords = values.get("keywords", [])
     if keywords is not None and (
         not isinstance(keywords, list) or not all(isinstance(item, str) for item in keywords)
