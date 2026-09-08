@@ -122,6 +122,11 @@ def test_advanced_filters_apply_after_broad_search() -> None:
     assert [result.url for result in filtered] == ["short"]
 
 
+def test_advanced_filter_uses_explicit_version_when_available() -> None:
+    result = SearchResult("track", "Artist - Track", "Artist", 240, version="Extended Mix")
+    assert apply_advanced_filters([result], {"version": "extended mix"}) == [result]
+
+
 def test_detect_track_version_classifies_dj_edits() -> None:
     assert detect_track_version("Artist - Track (Extended Mix)") == "Extended Mix"
     assert detect_track_version("Artist - Track [Instrumental]") == "Instrumental"

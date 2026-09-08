@@ -154,7 +154,12 @@ def apply_advanced_filters(
     if version:
         filtered = [
             result for result in filtered
-            if (result.version or detect_track_version(result.title)).casefold() == version.casefold()
+            if (
+                result.version
+                if result.version not in {"", "Unknown", "Original/Unknown"}
+                else detect_track_version(result.title)
+            ).casefold()
+            == version.casefold()
         ]
     return filtered
 
