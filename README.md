@@ -97,6 +97,10 @@ DJ sourcing, for example:
 /aisearch energetic afro house between 120-124 bpm under 10 minutes
 ```
 
+After confirmation, AI search queries YouTube and SoundCloud concurrently, merges
+their results, removes duplicates, and keeps the provider label on each result.
+Normal `/search` remains YouTube-only.
+
 The bot searches up to 100 provider results and displays five numbered inline
 buttons at a time. Use `Next` and `Previous` to browse all eligible results, then
 click one to download that specific result. Plain text without a URL is treated as

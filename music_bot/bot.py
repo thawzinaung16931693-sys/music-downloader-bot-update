@@ -253,13 +253,10 @@ def create_application(config: Config) -> Application:
         await query.answer()
         await query.edit_message_text("🔎 Searching the confirmed interpretation...")
         try:
-            results = await asyncio.to_thread(
-                search_tracks,
+            results = await search_multiple_sources(
                 provider_query(intent),
-                field="search",
                 max_duration=min(config.max_duration_seconds, 900),
                 cookies_file=config.cookies_file,
-                source=(preferences.get(query.from_user.id)["source"]),
             )
             context.user_data["search_results"] = results
             context.user_data["search_query"] = original
@@ -708,6 +705,28 @@ def _intent_preview(intent) -> str:
         f"🎤 Instrumental: {value(intent.instrumental)}\n\n"
         "Please confirm before searching."
     )
+
+
+async def search_multiple_sources(
+    query: str,
+    *,
+    max_duration: int,
+    cookies_file: str | None = None,
+) -> list[SearchResult]:
+    """Search independent public providers concurrently for AI mode."""
+    searches = await asyncio.gather(
+        asyncio.to_thread(search_tracks, query, max_duration=max_duration, cookies_file=cookies_file, source="youtube"),
+        asyncio.to_thread(search_tracks, query, max_duration=max_duration, cookies_file=cookies_file, source="soundcloud"),
+        return_exceptions=True,
+    )
+    results: list[SearchResult] = []
+    for value in searches:
+        if isinstance(value, list):
+            results.extend(value)
+    if not results:
+        raise DownloadError("No public results were found from YouTube or SoundCloud.")
+    from .downloader import rank_search_results
+    return rank_search_results(results, query)
 
 
 def _format_bpm(bpm: float | None) -> str:
