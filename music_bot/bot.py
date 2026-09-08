@@ -30,7 +30,7 @@ from .ui import emoji
 
 LOGGER = logging.getLogger(__name__)
 HELP_TEXT = (
-    "🎵 <b>Music Finder</b>\n"
+    "🎵 <b>Bar Lar Lar</b>\n"
     "━━━━━━━━━━━━━━━━━━\n"
     "Find a track and download it as a high-quality MP3.\n\n"
     "🔎 <b>Search commands</b>\n"
@@ -45,8 +45,8 @@ HELP_TEXT = (
 )
 HELP_TEXTS = {
     "en": HELP_TEXT,
-    "my": "🎵 <b>Music Finder</b>\n━━━━━━━━━━━━━━━━━━\nသီချင်းအမည်၊ အဆိုတော် သို့မဟုတ် လင့်ခ် ပို့ပြီး MP3 ရယူပါ။\n\n🔎 /search အဆိုတော်နှင့် သီချင်းအမည်\n🎵 /title သီချင်းအမည်\n👤 /artist အဆိုတော်အမည်\n\n⚖️ ခွင့်ပြုချက်ရှိသော အသံဖိုင်များကိုသာ ဒေါင်းလုပ်လုပ်ပါ။",
-    "zh": "🎵 <b>Music Finder</b>\n━━━━━━━━━━━━━━━━━━\n发送歌曲名、歌手名或音乐链接，下载高质量 MP3。\n\n🔎 /search 歌手和歌曲名\n🎵 /title 歌曲名\n👤 /artist 歌手名\n\n⚖️ 请只下载您有权使用的音频。",
+    "my": "🎵 <b>Bar Lar Lar</b>\n━━━━━━━━━━━━━━━━━━\nသီချင်းအမည်၊ အဆိုတော် သို့မဟုတ် လင့်ခ် ပို့ပြီး MP3 ရယူပါ။\n\n🔎 /search အဆိုတော်နှင့် သီချင်းအမည်\n🎵 /title သီချင်းအမည်\n👤 /artist အဆိုတော်အမည်\n\n⚖️ ခွင့်ပြုချက်ရှိသော အသံဖိုင်များကိုသာ ဒေါင်းလုပ်လုပ်ပါ။",
+    "zh": "🎵 <b>Bar Lar Lar</b>\n━━━━━━━━━━━━━━━━━━\n发送歌曲名、歌手名或音乐链接，下载高质量 MP3。\n\n🔎 /search 歌手和歌曲名\n🎵 /title 歌曲名\n👤 /artist 歌手名\n\n⚖️ 请只下载您有权使用的音频。",
 }
 SEARCH_PAGE_SIZE = 5
 LANGUAGES = {
@@ -55,7 +55,7 @@ LANGUAGES = {
     "zh": {"name": "中文", "search": "搜索音乐", "ai_search": "AI 搜索", "help": "帮助", "language": "语言"},
 }
 BOT_COMMANDS = [
-    BotCommand("start", "Start the music bot"),
+    BotCommand("start", "Start Bar Lar Lar"),
     BotCommand("help", "Show help and usage"),
     BotCommand("search", "Search by artist and title"),
     BotCommand("aisearch", "AI-assisted DJ source search"),

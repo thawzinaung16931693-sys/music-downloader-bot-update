@@ -1,6 +1,6 @@
-# Telegram Music Bot
+# Bar Lar Lar
 
-A Telegram Bot API bot that accepts a public music link, extracts its best available
+A Telegram Bot API bot branded **Bar Lar Lar** that accepts a public music link, extracts its best available
 audio with yt-dlp, converts it to MP3 with FFmpeg, and sends it back as a Telegram
 audio file. It uses `python-telegram-bot`; no Telethon user session or Telegram API
 ID/hash is required.
