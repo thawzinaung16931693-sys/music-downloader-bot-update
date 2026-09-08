@@ -16,6 +16,7 @@ from telegram.ext import (
     MessageHandler,
     filters,
 )
+from telegram.request import HTTPXRequest
 
 from .config import Config
 from .ai_parser import AIParser, provider_query
@@ -79,6 +80,8 @@ def create_application(config: Config) -> Application:
     application = (
         Application.builder()
         .token(config.bot_token)
+        .request(HTTPXRequest(connect_timeout=30, read_timeout=60, write_timeout=60, pool_timeout=30))
+        .get_updates_request(HTTPXRequest(connect_timeout=30, read_timeout=90, write_timeout=60, pool_timeout=30))
         .post_init(configure_command_menu)
         .build()
     )
