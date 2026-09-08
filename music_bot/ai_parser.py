@@ -185,6 +185,8 @@ def _intent_from_values(query: str, values: dict[str, object]) -> SearchIntent:
         raise ValueError("AI intent must be a JSON object")
     normalized: dict[str, object] = {}
     search_mode = values.get("search_mode", "track")
+    if isinstance(search_mode, str):
+        search_mode = search_mode.strip().casefold()
     if search_mode not in {"track", "artist", "genre", "similar"}:
         raise ValueError("search_mode is invalid")
     normalized["search_mode"] = search_mode

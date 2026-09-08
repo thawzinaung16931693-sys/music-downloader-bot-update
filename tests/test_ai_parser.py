@@ -103,6 +103,10 @@ def test_search_mode_is_validated() -> None:
         _intent_from_values("test", {"search_mode": "collection"})
 
 
+def test_search_mode_accepts_provider_case_variation() -> None:
+    assert _intent_from_values("test", {"search_mode": "ARTIST"}).search_mode == "artist"
+
+
 def test_intent_validation_accepts_null_optional_duration() -> None:
     intent = _intent_from_values("test", {"max_duration": None})
     assert intent.max_duration == 900
