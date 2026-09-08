@@ -94,7 +94,8 @@ class AIParser:
                     "or invent a language, country, artist, title, genre, mood, or version. "
                     "Preserve terms such as Myanmar, Burmese, popular, house, remix, live, "
                     "instrumental, and extended mix. Return JSON only with keys artist, title, "
-                    "genre, mood, min_bpm, max_bpm, max_duration, instrumental, keywords. "
+                    "genre, mood, language, region, version, popularity, min_bpm, max_bpm, "
+                    "max_duration, instrumental, keywords. "
                     "Put important original terms that do not fit another field in keywords. "
                     "Use null or [] when absent. Original user query: "
                     f"{query}"
@@ -124,7 +125,8 @@ class AIParser:
                         "or invent a language, country, artist, title, genre, mood, or version. "
                         "Preserve terms such as Myanmar, Burmese, popular, house, remix, live, "
                         "instrumental, and extended mix. Return JSON only with keys artist, title, "
-                        "genre, mood, min_bpm, max_bpm, max_duration, instrumental, keywords. "
+                        "genre, mood, language, region, version, popularity, min_bpm, max_bpm, "
+                        "max_duration, instrumental, keywords. "
                         "Put important original terms that do not fit another field in keywords. "
                         "Use null or [] when absent. Original user query: "
                         f"{query}"
@@ -148,8 +150,9 @@ class AIParser:
                         "You are a strict music search parser, not a recommender. Extract only facts "
                         "explicitly present in the user's query. Never translate, replace, broaden, "
                         "or invent a language, country, artist, title, genre, mood, or version. "
-                        "Return JSON only with keys artist, title, genre, mood, min_bpm, max_bpm, "
-                        "max_duration, instrumental, keywords. Original user query: "
+                        "Return JSON only with keys artist, title, genre, mood, language, region, "
+                        "version, popularity, min_bpm, max_bpm, max_duration, instrumental, "
+                        "keywords. Original user query: "
                         f"{query}"
                     )}]}],
                     "generationConfig": {"temperature": 0, "responseMimeType": "application/json"},
@@ -191,7 +194,7 @@ def _intent_from_values(query: str, values: dict[str, object]) -> SearchIntent:
     normalized["keywords"] = tuple(
         " ".join(item.split()).strip()[:60] for item in keywords if item.strip()
     )
-    for key in ("artist", "title", "genre", "mood"):
+    for key in ("artist", "title", "genre", "mood", "language", "region", "version", "popularity"):
         value = values.get(key)
         if value is not None:
             if not isinstance(value, str):
@@ -230,7 +233,10 @@ def _intent_from_values(query: str, values: dict[str, object]) -> SearchIntent:
 
 def provider_query(intent: SearchIntent) -> str:
     """Turn parsed DJ intent into a provider-friendly search query."""
-    parts = [intent.artist, intent.title, intent.genre, intent.mood, *intent.keywords, intent.raw_query]
+    parts = [
+        intent.artist, intent.title, intent.language, intent.region, intent.genre,
+        intent.mood, intent.version, intent.popularity, *intent.keywords, intent.raw_query,
+    ]
     if intent.min_bpm is not None:
         bpm = str(int(intent.min_bpm))
         parts.append(f"{bpm} bpm" if intent.max_bpm is None else f"{bpm}-{int(intent.max_bpm)} bpm")

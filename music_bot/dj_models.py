@@ -10,6 +10,10 @@ class SearchIntent:
     title: str | None = None
     genre: str | None = None
     mood: str | None = None
+    language: str | None = None
+    region: str | None = None
+    version: str | None = None
+    popularity: str | None = None
     min_bpm: float | None = None
     max_bpm: float | None = None
     max_duration: int = 900

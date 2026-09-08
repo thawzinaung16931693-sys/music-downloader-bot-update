@@ -82,3 +82,14 @@ def test_intent_validation_rejects_invalid_keywords() -> None:
 def test_intent_validation_accepts_null_optional_duration() -> None:
     intent = _intent_from_values("test", {"max_duration": None})
     assert intent.max_duration == 900
+
+
+def test_intent_validation_preserves_dj_context_fields() -> None:
+    intent = _intent_from_values(
+        "Popular Myanmar House Remix",
+        {"language": "Burmese", "region": "Myanmar", "version": "Remix", "popularity": "popular"},
+    )
+    assert intent.language == "Burmese"
+    assert intent.region == "Myanmar"
+    assert intent.version == "Remix"
+    assert "Myanmar" in provider_query(intent)

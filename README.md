@@ -107,6 +107,9 @@ AI output is validated before the preview: unknown fields are ignored, text is
 normalized and length-limited, BPM must be between 40 and 240, minimum BPM cannot
 exceed maximum BPM, duration is limited to 15 minutes, and malformed responses use
 the local parser fallback.
+The structured intent includes language, region, track version, and popularity.
+Popularity is treated only as a soft search preference unless a provider supplies
+verified engagement data.
 Use `/help` for the short guide to all search commands, filters, navigation, settings,
 and exported files.
 Tap `🤖 AI Search`, then send a natural-language DJ request. Tap `🔎 Search` for a
