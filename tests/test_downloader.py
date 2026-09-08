@@ -13,6 +13,7 @@ from music_bot.downloader import (
     detect_track_version,
     explain_match,
     remove_duplicate_results,
+    SearchResult,
 )
 from unittest.mock import patch
 
