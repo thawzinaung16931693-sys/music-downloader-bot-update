@@ -136,6 +136,8 @@ result is allowed into the list and is checked again before download.
 Results are ranked for exact artist/title relevance and DJ-friendly versions before
 pagination, with official videos, live recordings, shorts, covers, and weak matches
 ranked lower.
+Each result displays a deterministic match percentage and a broad match category,
+so users can understand why it appears in the list.
 Duplicate uploads are removed while distinct versions such as extended mixes,
 remixes, instrumentals, acapellas, and live versions remain available.
 Every result page includes `⚙️ Filters`. Choose a source (`▶️ YouTube`,

@@ -11,6 +11,7 @@ from music_bot.downloader import (
     rank_search_results,
     apply_advanced_filters,
     detect_track_version,
+    explain_match,
     remove_duplicate_results,
 )
 from unittest.mock import patch
@@ -97,6 +98,17 @@ def test_rank_search_results_prefers_myanmar_evidence() -> None:
         SearchResult("myanmar", "Myanmar House Remix", "Burmese DJ", 200),
     ]
     assert rank_search_results(results, "Popular Myanmar House Remix")[0].url == "myanmar"
+
+
+def test_ranked_result_has_explainable_score() -> None:
+    from music_bot.downloader import SearchResult
+
+    result = rank_search_results(
+        [SearchResult("a", "Daft Punk One More Time Official Audio", "Daft Punk", 230)],
+        "Daft Punk One More Time",
+    )[0]
+    assert result.match_score > 0
+    assert explain_match(result) in {"Excellent match", "Strong match", "Possible match", "Broad match"}
 
 
 def test_advanced_filters_apply_after_broad_search() -> None:

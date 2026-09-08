@@ -5,7 +5,7 @@ import logging
 import re
 import re
 import socket
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from urllib.parse import quote, urlparse
 from urllib.request import Request, urlopen
@@ -45,6 +45,7 @@ class SearchResult:
     thumbnail: str | None = None
     source: str = "YouTube"
     version: str = "Unknown"
+    match_score: int = 0
 
 
 def build_search_url(query: str, *, field: str = "search") -> str:
@@ -117,8 +118,23 @@ def search_tracks(
 def rank_search_results(results: list[SearchResult], query: str) -> list[SearchResult]:
     """Rank provider results for accurate, DJ-oriented search ordering."""
     tokens = _search_tokens(query)
-    ranked = sorted(results, key=lambda result: _result_score(result, tokens), reverse=True)
+    ranked = [
+        replace(result, match_score=round(max(0.0, min(100.0, _result_score(result, tokens)))))
+        for result in results
+    ]
+    ranked.sort(key=lambda result: result.match_score, reverse=True)
     return remove_duplicate_results(ranked)
+
+
+def explain_match(result: SearchResult) -> str:
+    """Return a user-safe explanation of the deterministic match score."""
+    if result.match_score >= 80:
+        return "Excellent match"
+    if result.match_score >= 55:
+        return "Strong match"
+    if result.match_score >= 30:
+        return "Possible match"
+    return "Broad match"
 
 
 def apply_advanced_filters(

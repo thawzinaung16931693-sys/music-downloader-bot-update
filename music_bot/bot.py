@@ -21,7 +21,7 @@ from telegram.request import HTTPXRequest
 from .config import Config
 from .ai_parser import AIParser, provider_query
 from .audio_analysis import analyze_audio
-from .downloader import DownloadError, SearchResult, apply_advanced_filters, download_track, extract_url, search_tracks
+from .downloader import DownloadError, SearchResult, apply_advanced_filters, download_track, explain_match, extract_url, search_tracks
 from .metadata import enrich_metadata
 from .exports import metadata_record, write_metadata_exports
 from .source_catalog import SOURCE_CATALOG, source_definition
@@ -660,7 +660,7 @@ async def _edit_result_message(message, text: str, markup: InlineKeyboardMarkup 
 
 def _result_label(index: int, result: SearchResult) -> str:
     duration = f" [{result.duration // 60}:{result.duration % 60:02d}]" if result.duration else ""
-    label = f"🎵 {index + 1}. {result.artist} - {result.title} · {result.version} · {result.source}"
+    label = f"🎵 {index + 1}. {result.artist} - {result.title} · {result.version} · {result.source} · {result.match_score}%"
     return label[:58] + duration
 
 
