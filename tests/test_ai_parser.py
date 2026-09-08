@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from music_bot.ai_parser import AIParser, _intent_from_values, parse_locally, provider_query
+from music_bot.ai_parser import AIParser, _decode_json_object, _intent_from_values, parse_locally, provider_query
 
 
 def test_local_dj_query_parsing() -> None:
@@ -68,3 +68,12 @@ def test_intent_validation_normalizes_and_limits_fields() -> None:
     assert intent.artist == "Vini Vici"
     assert intent.max_duration == 900
     assert intent.instrumental is True
+
+
+def test_json_decoder_accepts_gemini_markdown_fence() -> None:
+    assert _decode_json_object("```json\n{\"genre\": \"House\"}\n```")["genre"] == "House"
+
+
+def test_intent_validation_rejects_invalid_keywords() -> None:
+    with pytest.raises(ValueError, match="keywords"):
+        _intent_from_values("test", {"keywords": "House"})

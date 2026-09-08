@@ -18,6 +18,18 @@ class ParseResult:
         self.fallback_reason = fallback_reason
 
 
+def _decode_json_object(value: object) -> dict[str, object]:
+    if not isinstance(value, str):
+        raise ValueError("AI response content must be text")
+    content = value.strip()
+    if content.startswith("```"):
+        content = re.sub(r"^```(?:json)?\s*|\s*```$", "", content, flags=re.I).strip()
+    decoded = json.loads(content)
+    if not isinstance(decoded, dict):
+        raise ValueError("AI response must be a JSON object")
+    return decoded
+
+
 class AIParser:
     """Parse DJ search language with an optional OpenAI-compatible endpoint."""
 
@@ -91,7 +103,7 @@ class AIParser:
             timeout=self.timeout,
         )
         response.raise_for_status()
-        values = json.loads(response.json()["choices"][0]["message"]["content"])
+        values = _decode_json_object(response.json()["choices"][0]["message"]["content"])
         return _intent_from_values(query, values)
 
     async def _parse_remote_async(self, query: str) -> SearchIntent:
@@ -120,7 +132,7 @@ class AIParser:
                 },
             )
             response.raise_for_status()
-            values = json.loads(response.json()["choices"][0]["message"]["content"])
+            values = _decode_json_object(response.json()["choices"][0]["message"]["content"])
             return _intent_from_values(query, values)
 
     async def _parse_gemini_async(self, query: str) -> SearchIntent:
@@ -144,7 +156,7 @@ class AIParser:
                 },
             )
             response.raise_for_status()
-            values = json.loads(response.json()["candidates"][0]["content"]["parts"][0]["text"])
+            values = _decode_json_object(response.json()["candidates"][0]["content"]["parts"][0]["text"])
             return _intent_from_values(query, values)
 
 
@@ -169,6 +181,16 @@ def _intent_from_values(query: str, values: dict[str, object]) -> SearchIntent:
     if not isinstance(values, dict):
         raise ValueError("AI intent must be a JSON object")
     normalized: dict[str, object] = {}
+    keywords = values.get("keywords", [])
+    if keywords is not None and (
+        not isinstance(keywords, list) or not all(isinstance(item, str) for item in keywords)
+    ):
+        raise ValueError("keywords must be a list of text")
+    if isinstance(keywords, list) and len(keywords) > 20:
+        raise ValueError("too many AI keywords")
+    normalized["keywords"] = tuple(
+        " ".join(item.split()).strip()[:60] for item in keywords if item.strip()
+    )
     for key in ("artist", "title", "genre", "mood"):
         value = values.get(key)
         if value is not None:
@@ -206,7 +228,7 @@ def _intent_from_values(query: str, values: dict[str, object]) -> SearchIntent:
 
 def provider_query(intent: SearchIntent) -> str:
     """Turn parsed DJ intent into a provider-friendly search query."""
-    parts = [intent.artist, intent.title, intent.genre, intent.mood, intent.raw_query]
+    parts = [intent.artist, intent.title, intent.genre, intent.mood, *intent.keywords, intent.raw_query]
     if intent.min_bpm is not None:
         bpm = str(int(intent.min_bpm))
         parts.append(f"{bpm} bpm" if intent.max_bpm is None else f"{bpm}-{int(intent.max_bpm)} bpm")

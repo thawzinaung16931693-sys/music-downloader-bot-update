@@ -14,6 +14,7 @@ class SearchIntent:
     max_bpm: float | None = None
     max_duration: int = 900
     instrumental: bool | None = None
+    keywords: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
