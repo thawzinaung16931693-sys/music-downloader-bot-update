@@ -522,12 +522,12 @@ def create_application(config: Config) -> Application:
         if not message:
             return
         provider = detect_provider(url)
-        if provider and provider.metadata_only:
+        if provider and provider.metadata_only and provider.key not in {"spotify"}:
             await message.reply_text(
                 f"ℹ️ {provider.label} provides metadata only. Send a public audio link from a permitted source."
             )
             return
-        if provider and not provider.direct_download:
+        if provider and not provider.direct_download and provider.key not in {"spotify"}:
             await message.reply_text(f"⚠️ Direct downloads are not enabled for {provider.label}.")
             return
         status = await message.reply_text(

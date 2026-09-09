@@ -410,8 +410,13 @@ def _is_spotify_url(url: str) -> bool:
 def _spotify_search(url: str, cookies_file: str | None) -> str:
     del cookies_file
     path_parts = [part for part in urlparse(url).path.split("/") if part]
-    if len(path_parts) < 2 or path_parts[0] != "track":
-        raise DownloadError("Spotify playlists and albums are not supported; send one track.")
+    # Support both /track/<id> and /intl-xx/track/<id>
+    if "track" not in path_parts:
+        raise DownloadError(
+            "Spotify playlists, albums, and artist pages are not supported; send one track link."
+        )
+    if len(path_parts) < 2:
+        raise DownloadError("The Spotify link is too short; send a full track link.")
 
     endpoint = f"https://open.spotify.com/oembed?url={quote(url, safe='')}"
     try:

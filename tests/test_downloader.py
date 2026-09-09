@@ -53,6 +53,27 @@ def test_spotify_playlist_is_rejected_without_network_request() -> None:
         _spotify_search("https://open.spotify.com/playlist/123", None)
 
 
+def test_spotify_locale_prefixed_url_is_accepted() -> None:
+    """_spotify_search should accept URLs like /intl-ja/track/<id>."""
+    # This would previously fail because path_parts[0] == "intl-ja" != "track"
+    # Now it accepts any URL containing "track" in its path.
+    # The oEmbed call is not made because we mock urlopen.
+    with patch("music_bot.downloader.urlopen") as mock_urlopen:
+        mock_urlopen.return_value.__enter__.return_value.read.return_value = (
+            b'{"title": "Test Track"}'
+        )
+        result = _spotify_search(
+            "https://open.spotify.com/intl-ja/track/0VjIjW4GlUZAMYd2vXMi3b", None
+        )
+    assert "ytsearch1:Test Track" in result
+
+
+def test_spotify_artist_page_rejected() -> None:
+    """Artist pages (no 'track' in path) should still be rejected."""
+    with pytest.raises(DownloadError, match="not supported"):
+        _spotify_search("https://open.spotify.com/artist/123", None)
+
+
 def test_build_search_url_normalizes_query() -> None:
     assert build_search_url("  Daft   Punk   One More Time ") == (
         "ytsearch100:Daft Punk One More Time audio"
