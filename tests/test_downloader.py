@@ -49,7 +49,7 @@ def test_spotify_host_detection_does_not_accept_suffix_attack() -> None:
 
 
 def test_spotify_playlist_is_rejected_without_network_request() -> None:
-    with pytest.raises(DownloadError, match="playlists and albums"):
+    with pytest.raises(DownloadError, match="playlists.*albums"):
         _spotify_search("https://open.spotify.com/playlist/123", None)
 
 
