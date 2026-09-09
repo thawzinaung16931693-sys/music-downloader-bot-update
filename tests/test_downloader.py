@@ -284,10 +284,15 @@ def test_download_track_falls_back_to_ytdlp_when_universal_returns_none(tmp_path
         "duration": 180,
         "thumbnail": "https://img.example.com/f.jpg",
     }
+
+    # Proper context-manager mock: YoutubeDL() → cm_instance → __enter__ → ydl
     fake_ydl = MagicMock()
     fake_ydl.prepare_filename.return_value = str(tmp_path / "fallback")
     fake_ydl.extract_info.side_effect = [mock_info, mock_info]
-    fake_ydl_class = MagicMock(return_value=fake_ydl)
+
+    cm_instance = MagicMock()
+    cm_instance.__enter__.return_value = fake_ydl
+    fake_ydl_class = MagicMock(return_value=cm_instance)
 
     with patch(
         "music_bot.downloader._is_spotify_url", return_value=False
@@ -342,7 +347,10 @@ def test_download_track_skips_universal_for_ytsearch_urls(tmp_path: Path) -> Non
     fake_ydl = MagicMock()
     fake_ydl.prepare_filename.return_value = str(tmp_path / "ytsearch")
     fake_ydl.extract_info.side_effect = [mock_info, mock_info]
-    fake_ydl_class = MagicMock(return_value=fake_ydl)
+
+    cm_instance = MagicMock()
+    cm_instance.__enter__.return_value = fake_ydl
+    fake_ydl_class = MagicMock(return_value=cm_instance)
 
     universal_called = []
 
@@ -433,6 +441,9 @@ def test_download_track_ytdlp_fallback_does_not_retry_universal(tmp_path: Path) 
     """When universal fails and yt-dlp also fails, it raises without retry loop."""
     universal_calls = []
 
+    # YoutubeDL() itself raises DownloadError (before __enter__)
+    cm_instance = MagicMock(side_effect=DownloadError("yt-dlp also failed"))
+
     with patch(
         "music_bot.downloader._is_spotify_url", return_value=False
     ), patch(
@@ -455,8 +466,7 @@ def test_download_track_ytdlp_fallback_does_not_retry_universal(tmp_path: Path) 
         "music_bot.universal_fallback.download_primary",
         side_effect=lambda *a, **kw: universal_calls.append(1) or None,
     ), patch(
-        "music_bot.downloader.yt_dlp.YoutubeDL",
-        side_effect=DownloadError("yt-dlp also failed"),
+        "music_bot.downloader.yt_dlp.YoutubeDL", return_value=cm_instance
     ):
         with pytest.raises(DownloadError, match="yt-dlp also failed"):
             download_track(

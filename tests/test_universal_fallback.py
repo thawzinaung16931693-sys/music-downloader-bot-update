@@ -18,9 +18,9 @@ def test_primary_returns_none_when_package_missing(tmp_path: Path) -> None:
 
 
 def test_primary_returns_none_on_import_error(tmp_path: Path) -> None:
-    with patch(
-        "music_bot.universal_fallback.__import__",
-        side_effect=ImportError("no module"),
+    with patch.dict(
+        sys.modules,
+        {"downloader.core.engines.ytdlp_engine": None},
     ):
         result = download_primary("https://example.com/track", tmp_path)
     assert result is None
