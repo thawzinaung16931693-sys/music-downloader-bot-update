@@ -581,12 +581,23 @@ def create_application(config: Config) -> Application:
                     )
                     await status.edit_text(f"{emoji('success')} <b>Track ready</b>\n⬆️ Uploading MP3...", parse_mode="HTML")
                     await message.chat.send_action(ChatAction.UPLOAD_DOCUMENT)
-                    with track.path.open("rb") as audio_file:
-                        await message.reply_audio(
-                            audio=audio_file, title=track.title, performer=track.artist,
-                            duration=track.duration or None,
-                            caption=_analysis_caption(track.artist, track.title, analysis),
-                        )
+                    file_size_mb = track.path.stat().st_size / (1024 * 1024)
+                    TELEGRAM_AUDIO_LIMIT_MB = 50
+                    # Use reply_document for files too large to send as audio
+                    if file_size_mb > TELEGRAM_AUDIO_LIMIT_MB:
+                        with track.path.open("rb") as audio_file:
+                            await message.reply_document(
+                                document=audio_file,
+                                filename=f"{track.artist} - {track.title}.mp3",
+                                caption=_analysis_caption(track.artist, track.title, analysis),
+                            )
+                    else:
+                        with track.path.open("rb") as audio_file:
+                            await message.reply_audio(
+                                audio=audio_file, title=track.title, performer=track.artist,
+                                duration=track.duration or None,
+                                caption=_analysis_caption(track.artist, track.title, analysis),
+                            )
                     with json_path.open("rb") as json_file:
                         await message.reply_document(json_file, caption="📋 DJ metadata (JSON)")
                     with csv_path.open("rb") as csv_file:
