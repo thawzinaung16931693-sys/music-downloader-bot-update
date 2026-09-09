@@ -28,6 +28,8 @@ SOURCE_CATALOG = (
     SourceDefinition("tidal", "🟣 Tidal metadata", "metadata", "Metadata only"),
     SourceDefinition("traxsource", "🎛️ Traxsource metadata", "metadata", "Metadata only unless licensed"),
     SourceDefinition("djuu", "🎚️ DJUU", "url", "Chinese DJ remix tracks"),
+    SourceDefinition("172mix", "🎛️ 172Mix", "url", "Chinese DJ remix platform"),
+    SourceDefinition("baidudj", "🔊 BaiduDJ", "url", "Login required for download"),
 )
 
 

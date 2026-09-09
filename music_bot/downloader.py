@@ -303,11 +303,17 @@ def download_track(
     validate_ccmixter_track_url(url)
     from .providers.djuu import validate_djuu_track_url
     validate_djuu_track_url(url)
+    from .providers._172mix import validate_172mix_track_url
+    validate_172mix_track_url(url)
     target = _spotify_search(url, cookies_file) if _is_spotify_url(url) else url
     if _is_djuu_url(url):
         target, djuu_title = _djuu_resolve(url)
     else:
         djuu_title = None
+    if _is_172mix_url(url):
+        target, m172_title = _172mix_resolve(url)
+    else:
+        m172_title = None
 
     # ── primary path: universal-downloader ────────────────────────────────
     if not url.startswith("ytsearch"):
@@ -324,7 +330,7 @@ def download_track(
         )
         if primary_result is not None:
             path = Path(primary_result["path"])
-            title = djuu_title or str(primary_result.get("title") or path.stem)
+            title = djuu_title or m172_title or str(primary_result.get("title") or path.stem)
             return DownloadedTrack(
                 path=path,
                 title=title,
@@ -403,7 +409,7 @@ def download_track(
 
     return DownloadedTrack(
         path=mp3_path,
-        title=djuu_title or str(info.get("track") or info.get("title") or "Unknown title"),
+        title=djuu_title or m172_title or str(info.get("track") or info.get("title") or "Unknown title"),
         artist=str(info.get("artist") or info.get("uploader") or "Unknown artist"),
         duration=int(info.get("duration") or 0),
         thumbnail=info.get("thumbnail"),
@@ -427,6 +433,18 @@ def _djuu_resolve(url: str) -> tuple[str, str]:
     from .providers.djuu import resolve_djuu_audio
 
     return resolve_djuu_audio(url)
+
+
+def _is_172mix_url(url: str) -> bool:
+    host = (urlparse(url).hostname or "").lower().removeprefix("www.")
+    return host == "172mix.com"
+
+
+def _172mix_resolve(url: str) -> tuple[str, str]:
+    """Resolve a 172Mix play-page URL to its public streaming M4A URL and title."""
+    from .providers._172mix import resolve_172mix_audio
+
+    return resolve_172mix_audio(url)
 
 
 def _spotify_search(url: str, cookies_file: str | None) -> str:
