@@ -1,10 +1,16 @@
+import sys
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 from music_bot.downloader import (
+    DownloadedTrack,
     DownloadError,
     _is_spotify_url,
     _spotify_search,
     build_search_url,
+    download_track,
     extract_url,
     validate_public_url,
     search_tracks,
@@ -15,7 +21,6 @@ from music_bot.downloader import (
     remove_duplicate_results,
     SearchResult,
 )
-from unittest.mock import patch
 
 
 def test_extract_url_from_message() -> None:
@@ -213,3 +218,253 @@ def test_ccmixter_adapter_accepts_track_and_rejects_catalog() -> None:
     validate_ccmixter_track_url("https://ccmixter.org/files/artist/12345")
     with pytest.raises(DownloadError, match="one ccMixter track"):
         validate_ccmixter_track_url("https://ccmixter.org/search")
+
+
+# ── download_track: primary (universal) → fallback (yt-dlp) ────────────────
+
+
+def test_download_track_uses_universal_primary_when_available(tmp_path: Path) -> None:
+    """When universal-downloader is present and succeeds, use its result."""
+    output_file = tmp_path / "primary-track.mp3"
+    output_file.write_bytes(b"primary data")
+
+    with patch(
+        "music_bot.downloader._is_spotify_url", return_value=False
+    ), patch(
+        "music_bot.downloader.validate_public_url"
+    ), patch(
+        "music_bot.providers.bandcamp.validate_bandcamp_track_url"
+    ), patch(
+        "music_bot.providers.audius.validate_audius_track_url"
+    ), patch(
+        "music_bot.providers.hearthis.validate_hearthis_track_url"
+    ), patch(
+        "music_bot.providers.jamendo.validate_jamendo_track_url"
+    ), patch(
+        "music_bot.providers.fma.validate_fma_track_url"
+    ), patch(
+        "music_bot.providers.archive.validate_archive_audio_url"
+    ), patch(
+        "music_bot.providers.ccmixter.validate_ccmixter_track_url"
+    ), patch(
+        "music_bot.universal_fallback.download_primary",
+        return_value={
+            "path": str(output_file),
+            "title": "Universal Track",
+            "artist": "Universal Artist",
+            "duration": 200,
+            "thumbnail": "https://img.example.com/u.jpg",
+        },
+    ):
+        result = download_track(
+            "https://example.com/track",
+            tmp_path,
+            quality=192,
+            max_duration=900,
+            max_file_size_mb=200,
+        )
+
+    assert isinstance(result, DownloadedTrack)
+    assert result.path == output_file
+    assert result.title == "Universal Track"
+    assert result.artist == "Universal Artist"
+    assert result.duration == 200
+    assert result.thumbnail == "https://img.example.com/u.jpg"
+
+
+def test_download_track_falls_back_to_ytdlp_when_universal_returns_none(tmp_path: Path) -> None:
+    """When universal-downloader returns None, fall back to yt-dlp."""
+    # Prepare a mock mp3 file for yt-dlp to "produce"
+    output_file = tmp_path / "fallback.mp3"
+    output_file.write_bytes(b"fallback data")
+
+    mock_info = {
+        "title": "Fallback Track",
+        "artist": "Fallback Artist",
+        "duration": 180,
+        "thumbnail": "https://img.example.com/f.jpg",
+    }
+    fake_ydl = MagicMock()
+    fake_ydl.prepare_filename.return_value = str(tmp_path / "fallback")
+    fake_ydl.extract_info.side_effect = [mock_info, mock_info]
+    fake_ydl_class = MagicMock(return_value=fake_ydl)
+
+    with patch(
+        "music_bot.downloader._is_spotify_url", return_value=False
+    ), patch(
+        "music_bot.downloader.validate_public_url"
+    ), patch(
+        "music_bot.providers.bandcamp.validate_bandcamp_track_url"
+    ), patch(
+        "music_bot.providers.audius.validate_audius_track_url"
+    ), patch(
+        "music_bot.providers.hearthis.validate_hearthis_track_url"
+    ), patch(
+        "music_bot.providers.jamendo.validate_jamendo_track_url"
+    ), patch(
+        "music_bot.providers.fma.validate_fma_track_url"
+    ), patch(
+        "music_bot.providers.archive.validate_archive_audio_url"
+    ), patch(
+        "music_bot.providers.ccmixter.validate_ccmixter_track_url"
+    ), patch(
+        "music_bot.universal_fallback.download_primary",
+        return_value=None,  # universal unavailable
+    ), patch(
+        "music_bot.downloader.yt_dlp.YoutubeDL", fake_ydl_class
+    ):
+        result = download_track(
+            "https://example.com/track",
+            tmp_path,
+            quality=192,
+            max_duration=900,
+            max_file_size_mb=200,
+        )
+
+    assert isinstance(result, DownloadedTrack)
+    assert result.title == "Fallback Track"
+    assert result.artist == "Fallback Artist"
+    assert result.duration == 180
+    assert result.thumbnail == "https://img.example.com/f.jpg"
+
+
+def test_download_track_skips_universal_for_ytsearch_urls(tmp_path: Path) -> None:
+    """ytsearch: URLs skip the universal downloader and go straight to yt-dlp."""
+    output_file = tmp_path / "ytsearch.mp3"
+    output_file.write_bytes(b"ytsearch data")
+
+    mock_info = {
+        "title": "Search Result Track",
+        "artist": "Search Artist",
+        "duration": 150,
+        "thumbnail": None,
+    }
+    fake_ydl = MagicMock()
+    fake_ydl.prepare_filename.return_value = str(tmp_path / "ytsearch")
+    fake_ydl.extract_info.side_effect = [mock_info, mock_info]
+    fake_ydl_class = MagicMock(return_value=fake_ydl)
+
+    universal_called = []
+
+    with patch(
+        "music_bot.downloader.validate_public_url"
+    ), patch(
+        "music_bot.providers.bandcamp.validate_bandcamp_track_url"
+    ), patch(
+        "music_bot.providers.audius.validate_audius_track_url"
+    ), patch(
+        "music_bot.providers.hearthis.validate_hearthis_track_url"
+    ), patch(
+        "music_bot.providers.jamendo.validate_jamendo_track_url"
+    ), patch(
+        "music_bot.providers.fma.validate_fma_track_url"
+    ), patch(
+        "music_bot.providers.archive.validate_archive_audio_url"
+    ), patch(
+        "music_bot.providers.ccmixter.validate_ccmixter_track_url"
+    ), patch(
+        "music_bot.universal_fallback.download_primary",
+        side_effect=lambda *a, **kw: universal_called.append(1) or None,
+    ), patch(
+        "music_bot.downloader.yt_dlp.YoutubeDL", fake_ydl_class
+    ):
+        result = download_track(
+            "ytsearch1:test query audio",
+            tmp_path,
+            quality=192,
+            max_duration=900,
+            max_file_size_mb=200,
+        )
+
+    assert isinstance(result, DownloadedTrack)
+    assert len(universal_called) == 0  # never called for ytsearch
+
+
+def test_download_track_universal_primary_preserves_spotify_flow(tmp_path: Path) -> None:
+    """Spotify URLs are resolved to ytsearch before universal is attempted."""
+    output_file = tmp_path / "spotify-universal.mp3"
+    output_file.write_bytes(b"spotify data")
+
+    with patch(
+        "music_bot.downloader._is_spotify_url", return_value=True
+    ), patch(
+        "music_bot.downloader._spotify_search",
+        return_value="ytsearch1:Blinding Lights audio",
+    ), patch(
+        "music_bot.downloader.validate_public_url"
+    ), patch(
+        "music_bot.providers.bandcamp.validate_bandcamp_track_url"
+    ), patch(
+        "music_bot.providers.audius.validate_audius_track_url"
+    ), patch(
+        "music_bot.providers.hearthis.validate_hearthis_track_url"
+    ), patch(
+        "music_bot.providers.jamendo.validate_jamendo_track_url"
+    ), patch(
+        "music_bot.providers.fma.validate_fma_track_url"
+    ), patch(
+        "music_bot.providers.archive.validate_archive_audio_url"
+    ), patch(
+        "music_bot.providers.ccmixter.validate_ccmixter_track_url"
+    ), patch(
+        "music_bot.universal_fallback.download_primary",
+        return_value={
+            "path": str(output_file),
+            "title": "Blinding Lights",
+            "artist": "The Weeknd",
+            "duration": 200,
+            "thumbnail": None,
+        },
+    ):
+        result = download_track(
+            "https://open.spotify.com/track/0VjIjW4GlUZAMYd2vXMi3b",
+            tmp_path,
+            quality=192,
+            max_duration=900,
+            max_file_size_mb=200,
+        )
+
+    assert isinstance(result, DownloadedTrack)
+    assert result.title == "Blinding Lights"
+    assert result.artist == "The Weeknd"
+
+
+def test_download_track_ytdlp_fallback_does_not_retry_universal(tmp_path: Path) -> None:
+    """When universal fails and yt-dlp also fails, it raises without retry loop."""
+    universal_calls = []
+
+    with patch(
+        "music_bot.downloader._is_spotify_url", return_value=False
+    ), patch(
+        "music_bot.downloader.validate_public_url"
+    ), patch(
+        "music_bot.providers.bandcamp.validate_bandcamp_track_url"
+    ), patch(
+        "music_bot.providers.audius.validate_audius_track_url"
+    ), patch(
+        "music_bot.providers.hearthis.validate_hearthis_track_url"
+    ), patch(
+        "music_bot.providers.jamendo.validate_jamendo_track_url"
+    ), patch(
+        "music_bot.providers.fma.validate_fma_track_url"
+    ), patch(
+        "music_bot.providers.archive.validate_archive_audio_url"
+    ), patch(
+        "music_bot.providers.ccmixter.validate_ccmixter_track_url"
+    ), patch(
+        "music_bot.universal_fallback.download_primary",
+        side_effect=lambda *a, **kw: universal_calls.append(1) or None,
+    ), patch(
+        "music_bot.downloader.yt_dlp.YoutubeDL",
+        side_effect=DownloadError("yt-dlp also failed"),
+    ):
+        with pytest.raises(DownloadError, match="yt-dlp also failed"):
+            download_track(
+                "https://example.com/track",
+                tmp_path,
+                quality=192,
+                max_duration=900,
+                max_file_size_mb=200,
+            )
+
+    assert len(universal_calls) == 1  # tried once, not retried

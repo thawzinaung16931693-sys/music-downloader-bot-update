@@ -3,7 +3,6 @@ from __future__ import annotations
 import ipaddress
 import logging
 import re
-import re
 import socket
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -303,6 +302,31 @@ def download_track(
     from .providers.ccmixter import validate_ccmixter_track_url
     validate_ccmixter_track_url(url)
     target = _spotify_search(url, cookies_file) if _is_spotify_url(url) else url
+
+    # ── primary path: universal-downloader ────────────────────────────────
+    if not url.startswith("ytsearch"):
+        from .universal_fallback import download_primary
+
+        primary_result = download_primary(
+            target,
+            output_dir,
+            quality=quality,
+            cookies_file=cookies_file,
+            max_duration=max_duration,
+            max_file_size_mb=max_file_size_mb,
+            progress_callback=progress_callback,
+        )
+        if primary_result is not None:
+            path = Path(primary_result["path"])
+            return DownloadedTrack(
+                path=path,
+                title=str(primary_result.get("title") or path.stem),
+                artist=str(primary_result.get("artist") or "Unknown artist"),
+                duration=int(primary_result.get("duration") or 0),
+                thumbnail=primary_result.get("thumbnail"),
+            )
+
+    # ── fallback: yt-dlp direct ───────────────────────────────────────────
     output_template = str(output_dir / "%(title).180B-%(id)s.%(ext)s")
     options: dict[str, object] = {
         "format": "bestaudio/best",
@@ -347,21 +371,7 @@ def download_track(
 
             info = ydl.extract_info(info.get("webpage_url") or target, download=True)
             prepared_path = Path(ydl.prepare_filename(info))
-    except DownloadError as exc:
-        if not _is_spotify_url(url) and "too long" not in str(exc).lower():
-            from .universal_fallback import download_with_universal_downloader
-
-            fallback_path = download_with_universal_downloader(
-                url, output_dir, cookies_file=cookies_file, max_duration=max_duration
-            )
-            if fallback_path:
-                return DownloadedTrack(
-                    path=fallback_path,
-                    title=fallback_path.stem,
-                    artist="Unknown artist",
-                    duration=0,
-                    thumbnail=None,
-                )
+    except DownloadError:
         raise
     except yt_dlp.utils.DownloadError as exc:
         message = str(exc).removeprefix("ERROR: ").strip()
@@ -372,20 +382,6 @@ def download_track(
                 f"{provider_name} rejected or hid this result. Please choose another result "
                 "or try a permitted link from another source."
             ) from exc
-        if not _is_spotify_url(url):
-            from .universal_fallback import download_with_universal_downloader
-
-            fallback_path = download_with_universal_downloader(
-                url, output_dir, cookies_file=cookies_file, max_duration=max_duration
-            )
-            if fallback_path:
-                return DownloadedTrack(
-                    path=fallback_path,
-                    title=fallback_path.stem,
-                    artist="Unknown artist",
-                    duration=0,
-                    thumbnail=None,
-                )
         raise DownloadError(f"{provider_name} download failed: {message[:350]}") from exc
 
     mp3_path = prepared_path.with_suffix(".mp3")
