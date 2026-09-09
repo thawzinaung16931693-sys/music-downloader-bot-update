@@ -441,9 +441,6 @@ def test_download_track_ytdlp_fallback_does_not_retry_universal(tmp_path: Path) 
     """When universal fails and yt-dlp also fails, it raises without retry loop."""
     universal_calls = []
 
-    # YoutubeDL() itself raises DownloadError (before __enter__)
-    cm_instance = MagicMock(side_effect=DownloadError("yt-dlp also failed"))
-
     with patch(
         "music_bot.downloader._is_spotify_url", return_value=False
     ), patch(
@@ -466,7 +463,8 @@ def test_download_track_ytdlp_fallback_does_not_retry_universal(tmp_path: Path) 
         "music_bot.universal_fallback.download_primary",
         side_effect=lambda *a, **kw: universal_calls.append(1) or None,
     ), patch(
-        "music_bot.downloader.yt_dlp.YoutubeDL", return_value=cm_instance
+        "music_bot.downloader.yt_dlp.YoutubeDL",
+        side_effect=DownloadError("yt-dlp also failed"),
     ):
         with pytest.raises(DownloadError, match="yt-dlp also failed"):
             download_track(
