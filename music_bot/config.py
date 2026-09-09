@@ -12,7 +12,7 @@ class Config:
     bot_token: str
     audio_quality: int = 320
     max_duration_seconds: int = 900
-    max_file_size_mb: int = 49
+    max_file_size_mb: int = 200
     download_workers: int = 2
     cookies_file: str | None = None
 
@@ -43,7 +43,7 @@ class Config:
             bot_token=bot_token,
             audio_quality=quality,
             max_duration_seconds=_bounded_int("MAX_DURATION_SECONDS", 900, 1, 86_400),
-            max_file_size_mb=_bounded_int("MAX_FILE_SIZE_MB", 49, 1, 2_000),
+            max_file_size_mb=_bounded_int("MAX_FILE_SIZE_MB", 200, 1, 2_000),
             download_workers=_bounded_int("DOWNLOAD_WORKERS", 2, 1, 10),
             cookies_file=os.getenv("COOKIES_FILE") or None,
         )
