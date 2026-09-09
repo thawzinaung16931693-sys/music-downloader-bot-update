@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from html import escape
 import logging
+import subprocess
 import tempfile
 from pathlib import Path
 
@@ -581,23 +582,32 @@ def create_application(config: Config) -> Application:
                     )
                     await status.edit_text(f"{emoji('success')} <b>Track ready</b>\n⬆️ Uploading MP3...", parse_mode="HTML")
                     await message.chat.send_action(ChatAction.UPLOAD_DOCUMENT)
-                    file_size_mb = track.path.stat().st_size / (1024 * 1024)
-                    TELEGRAM_AUDIO_LIMIT_MB = 50
-                    # Use reply_document for files too large to send as audio
-                    if file_size_mb > TELEGRAM_AUDIO_LIMIT_MB:
-                        with track.path.open("rb") as audio_file:
-                            await message.reply_document(
-                                document=audio_file,
-                                filename=f"{track.artist} - {track.title}.mp3",
-                                caption=_analysis_caption(track.artist, track.title, analysis),
+                    TELEGRAM_LIMIT_MB = 50
+                    caption = _analysis_caption(track.artist, track.title, analysis)
+                    upload_path = track.path
+                    file_size_mb = upload_path.stat().st_size / (1024 * 1024)
+
+                    if file_size_mb > TELEGRAM_LIMIT_MB:
+                        await status.edit_text(
+                            f"📦 <b>Compressing for Telegram</b>\n"
+                            f"{file_size_mb:.0f} MB → target {TELEGRAM_LIMIT_MB} MB...",
+                            parse_mode="HTML",
+                        )
+                        upload_path = await asyncio.to_thread(
+                            _compress_mp3, upload_path, Path(temp_dir), TELEGRAM_LIMIT_MB
+                        )
+                        if upload_path is None:
+                            await status.edit_text(
+                                "❌ File is too large to upload via Telegram even after compression."
                             )
-                    else:
-                        with track.path.open("rb") as audio_file:
-                            await message.reply_audio(
-                                audio=audio_file, title=track.title, performer=track.artist,
-                                duration=track.duration or None,
-                                caption=_analysis_caption(track.artist, track.title, analysis),
-                            )
+                            return
+
+                    with upload_path.open("rb") as audio_file:
+                        await message.reply_audio(
+                            audio=audio_file, title=track.title, performer=track.artist,
+                            duration=track.duration or None,
+                            caption=caption,
+                        )
                     with json_path.open("rb") as json_file:
                         await message.reply_document(json_file, caption="📋 DJ metadata (JSON)")
                     with csv_path.open("rb") as csv_file:
@@ -783,6 +793,85 @@ def _settings_text(settings: dict[str, str | int]) -> str:
             f"🌐 Language: <code>{settings['language']}</code>\n"
             f"🎚️ Bitrate: <code>{settings['bitrate']} kbps</code>\n"
             f"🔗 Source: <code>{settings['source']}</code>")
+
+
+def _compress_mp3(source: Path, workdir: Path, target_mb: int) -> Path | None:
+    """Re-encode an MP3 at a lower bitrate so it fits within *target_mb* MB.
+
+    Returns the path to the compressed file on success, or ``None`` when the
+    source is already too long to fit even at 64 kbps.
+    """
+    import json
+
+    # Probe duration with ffprobe
+    try:
+        result = subprocess.run(
+            [
+                "ffprobe", "-v", "quiet", "-print_format", "json",
+                "-show_format", str(source),
+            ],
+            capture_output=True, text=True, timeout=30,
+            check=True,
+        )
+        probe = json.loads(result.stdout)
+        duration = float(probe.get("format", {}).get("duration", 0))
+    except Exception:
+        return None
+
+    if duration <= 0:
+        return None
+
+    # Calculate target bitrate (leave 1 MB headroom)
+    target_bytes = (target_mb - 1) * 1024 * 1024
+    target_bitrate_k = int((target_bytes * 8) / duration / 1000)
+
+    # Floor at 64 kbps; if even that won't fit, give up
+    MIN_BITRATE_K = 64
+    if target_bitrate_k < MIN_BITRATE_K:
+        return None
+    target_bitrate_k = min(target_bitrate_k, 320)
+
+    compressed = workdir / f"{source.stem}-tg{target_bitrate_k}k.mp3"
+    try:
+        subprocess.run(
+            [
+                "ffmpeg", "-y", "-v", "quiet",
+                "-i", str(source),
+                "-codec:a", "libmp3lame",
+                "-b:a", f"{target_bitrate_k}k",
+                str(compressed),
+            ],
+            timeout=300, check=True,
+        )
+    except Exception:
+        return None
+
+    if not compressed.is_file():
+        return None
+
+    # If it didn't help enough, try one more aggressive round
+    size_mb = compressed.stat().st_size / (1024 * 1024)
+    if size_mb > target_mb:
+        # Try 64k mono as last resort
+        compressed2 = workdir / f"{source.stem}-tg64k.mp3"
+        try:
+            subprocess.run(
+                [
+                    "ffmpeg", "-y", "-v", "quiet",
+                    "-i", str(source),
+                    "-codec:a", "libmp3lame",
+                    "-b:a", "64k", "-ac", "1",
+                    str(compressed2),
+                ],
+                timeout=300, check=True,
+            )
+            if compressed2.is_file() and compressed2.stat().st_size / (1024 * 1024) <= target_mb:
+                return compressed2
+        except Exception:
+            pass
+        return None
+
+    return compressed
 
 
 def main() -> None:
