@@ -301,7 +301,10 @@ def download_track(
     validate_archive_audio_url(url)
     from .providers.ccmixter import validate_ccmixter_track_url
     validate_ccmixter_track_url(url)
+    from .providers.djuu import validate_djuu_track_url
+    validate_djuu_track_url(url)
     target = _spotify_search(url, cookies_file) if _is_spotify_url(url) else url
+    target = _djuu_resolve(url) if _is_djuu_url(url) else target
 
     # ── primary path: universal-downloader ────────────────────────────────
     if not url.startswith("ytsearch"):
@@ -405,6 +408,19 @@ def download_track(
 
 def _is_spotify_url(url: str) -> bool:
     return (urlparse(url).hostname or "").lower() in SPOTIFY_HOSTS
+
+
+def _is_djuu_url(url: str) -> bool:
+    host = (urlparse(url).hostname or "").lower().removeprefix("www.")
+    return host == "djuu.com"
+
+
+def _djuu_resolve(url: str) -> str:
+    """Resolve a DJUU play-page URL to its public streaming M4A URL."""
+    from .providers.djuu import resolve_djuu_audio
+
+    m4a_url, _title = resolve_djuu_audio(url)
+    return m4a_url
 
 
 def _spotify_search(url: str, cookies_file: str | None) -> str:

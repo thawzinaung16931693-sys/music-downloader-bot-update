@@ -27,6 +27,7 @@ SOURCE_CATALOG = (
     SourceDefinition("deezer", "🎧 Deezer metadata", "metadata", "Metadata only"),
     SourceDefinition("tidal", "🟣 Tidal metadata", "metadata", "Metadata only"),
     SourceDefinition("traxsource", "🎛️ Traxsource metadata", "metadata", "Metadata only unless licensed"),
+    SourceDefinition("djuu", "🎚️ DJUU", "url", "Chinese DJ remix tracks"),
 )
 
 

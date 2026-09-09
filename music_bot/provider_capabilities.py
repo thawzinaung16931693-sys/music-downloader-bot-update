@@ -29,6 +29,7 @@ CAPABILITIES = {
     "tidal": ProviderCapability("tidal", "Tidal", False, False, True),
     "beatport": ProviderCapability("beatport", "Beatport", False, False, True),
     "traxsource": ProviderCapability("traxsource", "Traxsource", False, False, True),
+    "djuu": ProviderCapability("djuu", "DJUU", False, True),
 }
 
 
@@ -41,6 +42,7 @@ def detect_provider(url: str) -> ProviderCapability | None:
         "archive.org": "archive", "ccmixter.org": "ccmixter", "spotify.com": "spotify",
         "apple.com": "apple", "deezer.com": "deezer", "tidal.com": "tidal",
         "beatport.com": "beatport", "traxsource.com": "traxsource",
+        "djuu.com": "djuu",
     }
     for domain, key in rules.items():
         if host == domain or host.endswith("." + domain):
