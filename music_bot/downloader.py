@@ -312,11 +312,13 @@ def download_track(
         djuu_title = None
     if _is_172mix_url(url):
         target, m172_title = _172mix_resolve(url)
+        provider_referer = url  # mp3.172mix.com requires Referer from the main site
     else:
         m172_title = None
+        provider_referer = None
 
     # ── primary path: universal-downloader ────────────────────────────────
-    if not url.startswith("ytsearch"):
+    if not url.startswith("ytsearch") and not provider_referer:
         from .universal_fallback import download_primary
 
         primary_result = download_primary(
@@ -367,6 +369,8 @@ def download_track(
     }
     if cookies_file:
         options["cookiefile"] = cookies_file
+    if provider_referer:
+        options["http_headers"] = {"Referer": provider_referer}
 
     try:
         with yt_dlp.YoutubeDL(options) as ydl:
