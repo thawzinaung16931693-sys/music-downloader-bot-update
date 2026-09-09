@@ -21,11 +21,11 @@ LOGGER = logging.getLogger(__name__)
 _PLAY_PAGE = re.compile(r"^/play/(\d+)\.html$", re.IGNORECASE)
 # Embedded JSON-like object: var music = {id: ..., file: '...', name: '...', ...}
 _MUSIC_VAR = re.compile(
-    r"var\s+music\s*=\s*\{[^}]*file:\s*'([^']+)'[^}]*name:\s*'([^']+)'",
+    r"var\s+music\s*=\s*\{[^}]*name:\s*'([^']+)'[^}]*file:\s*'([^']+)'",
     re.DOTALL,
 )
 _MUSIC_VAR_ALT = re.compile(
-    r"var\s+music\s*=\s*\{[^}]*name:\s*'([^']+)'[^}]*file:\s*'([^']+)'",
+    r"var\s+music\s*=\s*\{[^}]*file:\s*'([^']+)'[^}]*name:\s*'([^']+)'",
     re.DOTALL,
 )
 
@@ -80,9 +80,9 @@ def resolve_djuu_audio(url: str) -> tuple[str, str]:
         m = pattern.search(html)
         if m:
             if pattern is _MUSIC_VAR:
-                file_ref, title = m.group(1), m.group(2)
-            else:
                 title, file_ref = m.group(1), m.group(2)
+            else:
+                file_ref, title = m.group(1), m.group(2)
             break
     else:
         raise DownloadError(

@@ -70,21 +70,20 @@ def test_music_var_regex_extracts_file_and_name() -> None:
     )
     m = _MUSIC_VAR.search(snippet)
     assert m is not None
-    assert m.group(1) == "c4/22/2026/338f205ccefe6b46"
-    assert m.group(2) == "刘欢 - 好汉歌(Dj宁 Electro Rmx 2026)"
+    assert m.group(1) == "刘欢 - 好汉歌(Dj宁 Electro Rmx 2026)"
+    assert m.group(2) == "c4/22/2026/338f205ccefe6b46"
 
 
 def test_music_var_alt_regex_extracts_reversed_fields() -> None:
-    """When name appears before file in the object literal."""
+    """When file appears before name in the object literal."""
     snippet = (
-        "var music = {id: 123, type: '5', "
-        "name: 'Artist - Track (Remix)', "
-        "file: 'a1/b2/2026/deadbeef', click: 0}"
+        "var music = {id: 123, file: 'a1/b2/2026/deadbeef', "
+        "type: '5', name: 'Artist - Track (Remix)', click: 0}"
     )
     m = _MUSIC_VAR_ALT.search(snippet)
     assert m is not None
-    assert m.group(1) == "Artist - Track (Remix)"
-    assert m.group(2) == "a1/b2/2026/deadbeef"
+    assert m.group(1) == "a1/b2/2026/deadbeef"
+    assert m.group(2) == "Artist - Track (Remix)"
 
 
 # ── Resolver tests (mocked HTTP) ───────────────────────────────────────────
