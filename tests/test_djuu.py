@@ -179,6 +179,7 @@ def test_djuu_resolve_hook() -> None:
         mock_response.read.return_value = html.encode("utf-8")
         mock_urlopen.return_value.__enter__.return_value = mock_response
 
-        resolved = _djuu_resolve("https://www.djuu.com/play/99.html")
+        m4a_url, title = _djuu_resolve("https://www.djuu.com/play/99.html")
 
-    assert resolved == "https://mp4.djuu.com/aa/bb/cc.m4a"
+    assert m4a_url == "https://mp4.djuu.com/aa/bb/cc.m4a"
+    assert title == "Test Track"
