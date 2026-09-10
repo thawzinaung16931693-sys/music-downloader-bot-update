@@ -194,7 +194,8 @@ def _system_prompt(language: str = "en") -> str:
     schema = (
         "Return JSON only with keys search_mode, artist, title, "
         "genre, mood, language, region, version, popularity, min_bpm, max_bpm, "
-        "max_duration, instrumental, keywords. search_mode must be track, artist, genre, or similar. "
+        "max_duration, instrumental, keywords. search_mode MUST be one of: track, artist, genre, or similar (never null). "
+        "Use 'track' as default when uncertain. "
         "Put important original terms that do not fit another field in keywords. "
         "Use null or [] when absent."
     )
@@ -226,7 +227,8 @@ def _system_prompt_gemini(language: str = "en") -> str:
     schema = (
         "Return JSON only with keys artist, title, genre, mood, language, region, "
         "search_mode, version, popularity, min_bpm, max_bpm, max_duration, instrumental, "
-        "keywords."
+        "keywords. search_mode MUST be one of: track, artist, genre, or similar (never null). "
+        "Use 'track' as default when uncertain."
     )
     
     return base + cultural_hints + schema
@@ -260,11 +262,12 @@ def _intent_from_values(query: str, values: dict[str, object]) -> SearchIntent:
     if not isinstance(values, dict):
         raise ValueError("AI intent must be a JSON object")
     normalized: dict[str, object] = {}
-    search_mode = values.get("search_mode", "track")
+    search_mode = values.get("search_mode") or "track"  # Default to "track" if null/missing
     if isinstance(search_mode, str):
         search_mode = search_mode.strip().casefold()
     if search_mode not in {"track", "artist", "genre", "similar"}:
-        raise ValueError("search_mode is invalid")
+        # Fallback to "track" for invalid values instead of raising error
+        search_mode = "track"
     normalized["search_mode"] = search_mode
     keywords = values.get("keywords", [])
     if keywords is not None and (
