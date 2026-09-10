@@ -104,6 +104,33 @@ def create_application(config: Config) -> Application:
         language = context.user_data.get("language", "en")
         return AIParser(user_language=language)
 
+    async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        if update.message:
+            await update.message.reply_text(HELP_TEXTS[_language(context)], parse_mode="HTML", disable_web_page_preview=True, reply_markup=_menu(context))
+
+    async def menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        if update.message:
+            await update.message.reply_text(f"{emoji('settings')} Music controls are ready below.", parse_mode="HTML", reply_markup=_menu(context))
+
+    async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        if update.message and update.effective_user:
+            await update.message.reply_text(
+                _settings_text(preferences.get(update.effective_user.id)),
+                parse_mode="HTML",
+                reply_markup=_settings_markup(),
+            )
+
+    async def language_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        if update.message:
+            await update.message.reply_text(
+                f"{emoji('settings')} Choose your language / ဘာသာစကား / 语言:",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("English", callback_data="lang:en")],
+                    [InlineKeyboardButton("ဗမာ (Burmese)", callback_data="lang:my")],
+                    [InlineKeyboardButton("中文 (Chinese)", callback_data="lang:zh")],
+                ]),
+            )
+
     async def history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Show recent search history with re-run option."""
         if not update.message or not update.effective_user:
