@@ -213,8 +213,15 @@ def create_application(config: Config) -> Application:
         return AIParser(user_language=language)
 
     async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        if update.message:
-            await update.message.reply_text(HELP_TEXTS[_language(context)], parse_mode="HTML", disable_web_page_preview=True, reply_markup=_menu(context))
+        try:
+            LOGGER.info(f"Help command received from user {update.effective_user.id if update.effective_user else 'unknown'}")
+            if update.message:
+                await update.message.reply_text(HELP_TEXTS[_language(context)], parse_mode="HTML", disable_web_page_preview=True, reply_markup=_menu(context))
+                LOGGER.info("Help message sent successfully")
+        except Exception as e:
+            LOGGER.error(f"Error in help_handler: {e}", exc_info=True)
+            if update.message:
+                await update.message.reply_text("Sorry, an error occurred. Please try again.")
 
     async def menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if update.message:
