@@ -324,9 +324,11 @@ def create_application(config: Config) -> Application:
         status = await message.reply_text(f"{emoji('search')} Searching {selected_source} for {escape(query)}...", parse_mode="HTML")
         try:
             search_query = query
+            intent = None
             if context.user_data.get("search_use_ai"):
-                intent_result = await asyncio.to_thread(ai_parser.parse, query)
-                search_query = provider_query(intent_result.intent)
+                parsed = await get_ai_parser(context).parse_async(query)
+                intent = parsed.intent if parsed.used_ai else None
+                search_query = provider_query(intent) if intent else query
             results = await asyncio.to_thread(
                 search_tracks,
                 search_query,
@@ -334,6 +336,7 @@ def create_application(config: Config) -> Application:
                 max_duration=min(config.max_duration_seconds, 900),
                 cookies_file=config.cookies_file,
                 source=selected_source,
+                intent=intent,
             )
             results = apply_advanced_filters(results, advanced)
             if not results:
