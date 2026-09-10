@@ -230,6 +230,9 @@ def _system_prompt_gemini(language: str = "en") -> str:
     )
     
     return base + cultural_hints + schema
+
+
+def parse_locally(query: str) -> SearchIntent:
     values: dict[str, object] = {}
     bpm = re.search(r"(?:between\s+)?(\d{2,3})\s*(?:-|to)\s*(\d{2,3})\s*bpm", query, re.I)
     if bpm:
