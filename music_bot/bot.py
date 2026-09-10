@@ -18,7 +18,7 @@ from telegram.ext import (
     filters,
 )
 from telegram.request import HTTPXRequest
-from telegram.error import RetryAfter, TelegramError
+from telegram.error import NetworkError, RetryAfter, TelegramError
 
 from .config import Config
 from .ai_parser import AIParser, provider_query
@@ -509,6 +509,10 @@ def create_application(config: Config) -> Application:
         await run_filtered_search(update, context)
 
     async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+        # Network errors during long-polling are expected; suppress noise
+        if isinstance(context.error, NetworkError):
+            LOGGER.debug("Telegram network error (auto-retry): %s", context.error)
+            return
         LOGGER.error("Unhandled Telegram update error", exc_info=context.error)
         if isinstance(update, Update) and update.effective_message:
             await update.effective_message.reply_text("❌ Something went wrong. Please try again.")
