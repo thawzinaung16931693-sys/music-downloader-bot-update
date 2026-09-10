@@ -49,8 +49,7 @@ HELP_TEXT = (
     "• <code>Myanmar hip hop 90-110 bpm</code>\n"
     "• <code>ဆိုင်းဆိုင်းမော် အချစ်သီချင်း</code>\n"
     "• <code>华语 DJ舞曲 串烧</code>\n\n"
-    "📜 <b>History &amp; Favorites</b>
-\n"
+    "📜 <b>History &amp; Favorites</b>\n"
     "• <code>/history</code> - View recent searches (re-run or save)\n"
     "• <code>/favorites</code> - Quick access to saved searches\n\n"
     "🎛️ <b>Smart Filters</b>\n"
