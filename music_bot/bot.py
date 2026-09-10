@@ -49,7 +49,8 @@ HELP_TEXT = (
     "• <code>Myanmar hip hop 90-110 bpm</code>\n"
     "• <code>ဆိုင်းဆိုင်းမော် အချစ်သီချင်း</code>\n"
     "• <code>华语 DJ舞曲 串烧</code>\n\n"
-    "📜 <b>History & Favorites</b>\n"
+    "📜 <b>History &amp; Favorites</b>
+\n"
     "• <code>/history</code> - View recent searches (re-run or save)\n"
     "• <code>/favorites</code> - Quick access to saved searches\n\n"
     "🎛️ <b>Smart Filters</b>\n"
@@ -59,15 +60,18 @@ HELP_TEXT = (
     "• ⏱️ <b>Duration</b> - Filter by length (<3min, 3-5min, 8+min...)\n"
     "• ⚙️ <b>All Filters</b> - Source, genre, version, quality\n\n"
     "⚙️ <b>Settings</b>\n"
-    "• <code>/settings</code> - Configure bitrate (128-320 kbps) & default source\n"
+    "• <code>/settings</code> - Configure bitrate (128-320 kbps) &amp; default source
+\n"
     "• <code>/language</code> - Switch language (English/Burmese/Chinese)\n"
     "• <code>/menu</code> - Show keyboard shortcuts\n\n"
     "📊 <b>What You Get</b>\n"
     "Every download includes:\n"
     "• High-quality MP3 audio (configurable bitrate)\n"
     "• DJ metadata (BPM, musical key, Camelot notation)\n"
-    "• Quality score & audio analysis\n"
-    "• JSON & CSV exports for DJ software\n"
+    "• Quality score &amp; audio analysis
+\n"
+    "• JSON &amp; CSV exports for DJ software
+\n"
     "• Match score showing search relevance\n\n"
     "💡 <b>Pro Tips</b>\n"
     "• AI search works in any language (Burmese/Chinese/English)\n"
@@ -112,7 +116,8 @@ HELP_TEXTS = {
         "• အရည်အသွေးမြင့် MP3 (bitrate ချိန်ညှိနိုင်)\n"
         "• DJ metadata (BPM၊ musical key၊ Camelot)\n"
         "• Quality score နှင့် audio analysis\n"
-        "• DJ software အတွက် JSON & CSV\n"
+        "• DJ software အတွက် JSON &amp; CSV
+\n"
         "• ရှာဖွေမှု ကိုက်ညီမှု score\n\n"
         "💡 <b>အကြံပြုချက်များ</b>\n"
         "• AI search သည် မည်သည့်ဘာသာစကားဖြင့်မဆို အလုပ်လုပ်သည်\n"
