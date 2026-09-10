@@ -56,8 +56,7 @@ HELP_TEXT = (
     "After search results appear:\n"
     "• 🥁 <b>BPM</b> - Filter by tempo ranges (60-90, 120-130, 140-180...)\n"
     "• 🔥 <b>Energy</b> - High/Medium/Low energy tracks\n"
-    "• ⏱️ <b>Duration</b> - Filter by length (&lt;3min, 3-5min, 8+min...)
-\n"
+    "• ⏱️ <b>Duration</b> - Filter by length (&lt;3min, 3-5min, 8+min...)\n"
     "• ⚙️ <b>All Filters</b> - Source, genre, version, quality\n\n"
     "⚙️ <b>Settings</b>\n"
     "• <code>/settings</code> - Configure bitrate (128-320 kbps) &amp; default source\n"
@@ -102,8 +101,7 @@ HELP_TEXTS = {
         "ရလဒ်များပေါ်လာပြီးနောက်:\n"
         "• 🥁 <b>BPM</b> - tempo အပိုင်းအခြားဖြင့် (60-90, 120-130, 140-180...)\n"
         "• 🔥 <b>Energy</b> - High/Medium/Low အင်အား tracks\n"
-        "• ⏱️ <b>ကြာချိန်</b> - အရှည်ဖြင့် (&lt;3min, 3-5min, 8+min...)
-\n"
+        "• ⏱️ <b>ကြာချိန်</b> - အရှည်ဖြင့် (&lt;3min, 3-5min, 8+min...)\n"
         "• ⚙️ <b>Filters အားလုံး</b> - Source၊ genre၊ version၊ quality\n\n"
         "⚙️ <b>ဆက်တင်များ</b>\n"
         "• <code>/settings</code> - Bitrate (128-320 kbps) နှင့် default source\n"
@@ -146,8 +144,7 @@ HELP_TEXTS = {
         "搜索结果出现后:\n"
         "• 🥁 <b>BPM</b> - 按节奏范围过滤 (60-90, 120-130, 140-180...)\n"
         "• 🔥 <b>能量</b> - 高/中/低能量曲目\n"
-        "• ⏱️ <b>时长</b> - 按长度过滤 (&lt;3分钟, 3-5分钟, 8+分钟...)
-\n"
+        "• ⏱️ <b>时长</b> - 按长度过滤 (&lt;3分钟, 3-5分钟, 8+分钟...)\n"
         "• ⚙️ <b>全部过滤器</b> - 来源、风格、版本、音质\n\n"
         "⚙️ <b>设置</b>\n"
         "• <code>/settings</code> - 配置比特率 (128-320 kbps) 和默认来源\n"
