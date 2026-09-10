@@ -140,7 +140,7 @@ class UsageLog(Base):
     
     action_type = Column(String(50), nullable=False)  # download, search, ai_search, settings_change
     resource_id = Column(String(255), nullable=True)
-    metadata = Column(JSON, nullable=True)
+    meta_data = Column(JSON, nullable=True)
     
     timestamp = Column(DateTime, server_default=func.now(), index=True)
 
