@@ -1,0 +1,15 @@
+[Unit]
+Description=Admin Dashboard Backend API
+After=network.target
+
+[Service]
+Type=simple
+User=musicbot
+WorkingDirectory=/opt/telegram-music-bot/admin-dashboard/backend
+Environment="PATH=/opt/telegram-music-bot/admin-dashboard/backend/.venv/bin"
+ExecStart=/opt/telegram-music-bot/admin-dashboard/backend/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

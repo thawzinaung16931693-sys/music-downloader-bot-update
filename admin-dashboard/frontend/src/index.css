@@ -1,0 +1,139 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-dark-900 text-gray-100 font-cyber;
+    background-image: 
+      linear-gradient(to bottom, rgba(255, 0, 110, 0.05) 1px, transparent 1px),
+      linear-gradient(to right, rgba(0, 245, 255, 0.05) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+}
+
+@layer components {
+  /* Neon Button */
+  .btn-neon {
+    @apply px-6 py-3 rounded-lg font-bold uppercase tracking-wider transition-all duration-300;
+    @apply border-2 border-neon-cyan text-neon-cyan;
+    @apply hover:bg-neon-cyan hover:text-dark-900 hover:shadow-neon-cyan;
+  }
+  
+  .btn-neon-pink {
+    @apply px-6 py-3 rounded-lg font-bold uppercase tracking-wider transition-all duration-300;
+    @apply border-2 border-neon-pink text-neon-pink;
+    @apply hover:bg-neon-pink hover:text-dark-900 hover:shadow-neon-pink;
+  }
+
+  /* Card */
+  .card {
+    @apply bg-dark-800 rounded-xl border border-dark-600 p-6 relative overflow-hidden;
+  }
+  
+  .card::before {
+    content: '';
+    @apply absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-neon-pink via-neon-cyan to-neon-purple;
+  }
+
+  /* Neon Text */
+  .text-neon-glow {
+    text-shadow: 
+      0 0 10px currentColor,
+      0 0 20px currentColor,
+      0 0 30px currentColor;
+  }
+
+  /* Input */
+  .input-cyber {
+    @apply bg-dark-700 border-2 border-dark-600 rounded-lg px-4 py-3 text-gray-100;
+    @apply focus:outline-none focus:border-neon-cyan focus:shadow-neon-cyan transition-all;
+  }
+
+  /* Stats Card */
+  .stat-card {
+    @apply card hover:border-neon-pink hover:shadow-neon-pink transition-all duration-300;
+  }
+
+  /* Scanline effect */
+  .scanline {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .scanline::after {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-b from-transparent via-neon-cyan to-transparent opacity-10;
+    @apply animate-scan pointer-events-none;
+  }
+
+  /* Glitch effect */
+  .glitch {
+    position: relative;
+  }
+  
+  .glitch::before,
+  .glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+  
+  .glitch::before {
+    left: 2px;
+    text-shadow: -2px 0 #ff006e;
+    clip: rect(44px, 450px, 56px, 0);
+    animation: glitch-anim 5s infinite linear alternate-reverse;
+  }
+  
+  .glitch::after {
+    left: -2px;
+    text-shadow: -2px 0 #00f5ff;
+    clip: rect(44px, 450px, 56px, 0);
+    animation: glitch-anim2 1s infinite linear alternate-reverse;
+  }
+
+  /* Table */
+  .table-cyber {
+    @apply w-full border-collapse;
+  }
+  
+  .table-cyber thead {
+    @apply bg-dark-700 border-b-2 border-neon-cyan;
+  }
+  
+  .table-cyber th {
+    @apply px-6 py-4 text-left text-sm font-bold text-neon-cyan uppercase tracking-wider;
+  }
+  
+  .table-cyber td {
+    @apply px-6 py-4 border-b border-dark-600;
+  }
+  
+  .table-cyber tbody tr {
+    @apply hover:bg-dark-700 transition-colors cursor-pointer;
+  }
+}
+
+@keyframes glitch-anim {
+  0% { clip: rect(10px, 9999px, 31px, 0); }
+  20% { clip: rect(85px, 9999px, 140px, 0); }
+  40% { clip: rect(20px, 9999px, 60px, 0); }
+  60% { clip: rect(140px, 9999px, 200px, 0); }
+  80% { clip: rect(50px, 9999px, 100px, 0); }
+  100% { clip: rect(70px, 9999px, 110px, 0); }
+}
+
+@keyframes glitch-anim2 {
+  0% { clip: rect(65px, 9999px, 119px, 0); }
+  20% { clip: rect(40px, 9999px, 80px, 0); }
+  40% { clip: rect(120px, 9999px, 180px, 0); }
+  60% { clip: rect(25px, 9999px, 75px, 0); }
+  80% { clip: rect(90px, 9999px, 145px, 0); }
+  100% { clip: rect(15px, 9999px, 55px, 0); }
+}
