@@ -13,7 +13,8 @@ from app.services.auth_service import (
     get_telegram_user_info,
     create_access_token,
     create_refresh_token,
-    decode_token
+    decode_token,
+    get_current_admin
 )
 
 router = APIRouter(prefix="/api/admin/auth", tags=["auth"])
@@ -164,5 +165,3 @@ async def get_current_user_info(
         "created_at": admin.created_at
     }
 
-
-from app.services.auth_service import get_current_admin
