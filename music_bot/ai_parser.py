@@ -56,7 +56,7 @@ def interpretation_confidence(intent: SearchIntent) -> int:
 class AIParser:
     """Parse DJ search language with an optional OpenAI-compatible endpoint."""
 
-    def __init__(self, *, endpoint: str | None = None, api_key: str | None = None, model: str | None = None):
+    def __init__(self, *, endpoint: str | None = None, api_key: str | None = None, model: str | None = None, user_language: str = "en"):
         self.endpoint = endpoint or os.getenv("AI_API_BASE_URL")
         self.api_key = api_key or os.getenv("AI_API_KEY")
         self.model = model or os.getenv("AI_MODEL", "gpt-4o-mini")
@@ -64,6 +64,7 @@ class AIParser:
         self.timeout = float(os.getenv("AI_TIMEOUT_SECONDS", "45"))
         self.retries = max(0, int(os.getenv("AI_RETRIES", "1")))
         self.cache_seconds = max(0, int(os.getenv("AI_CACHE_SECONDS", "300")))
+        self.user_language = user_language
         self._cache: dict[str, tuple[float, ParseResult]] = {}
 
     def parse(self, query: str) -> ParseResult:
@@ -84,15 +85,19 @@ class AIParser:
         query = " ".join(query.split()).strip()
         if not query or len(query) > 200:
             raise ValueError("Search text must contain between 1 and 200 characters.")
-        cached = self._cache.get(query.casefold())
+        
+        # Check cache first (includes language in key)
+        cache_key = f"{self.user_language}:{query.casefold()}"
+        cached = self._cache.get(cache_key)
         if cached and time.monotonic() - cached[0] < self.cache_seconds:
             return cached[1]
+        
         if not self.endpoint or not self.api_key:
             return ParseResult(parse_locally(query), False, "not_configured")
         for attempt in range(self.retries + 1):
             try:
                 result = ParseResult(await self._parse_remote_async(query), True)
-                self._cache[query.casefold()] = (time.monotonic(), result)
+                self._cache[cache_key] = (time.monotonic(), result)
                 return result
             except httpx.TimeoutException:
                 reason = "timeout"
@@ -104,6 +109,7 @@ class AIParser:
 
     def _parse_remote(self, query: str) -> SearchIntent:
         endpoint = urljoin(self.endpoint.rstrip("/") + "/", "chat/completions")
+        prompt = _system_prompt(self.user_language)
         response = httpx.post(
             endpoint,
             headers={"Authorization": f"Bearer {self.api_key}"},
@@ -111,18 +117,7 @@ class AIParser:
                 "model": self.model,
                 "temperature": 0,
                 "response_format": {"type": "json_object"},
-                "messages": [{"role": "user", "content": (
-                    "You are a strict music search parser, not a recommender. Extract only facts "
-                    "explicitly present in the user's query. Never translate, replace, broaden, "
-                    "or invent a language, country, artist, title, genre, mood, or version. "
-                    "Preserve terms such as Myanmar, Burmese, popular, house, remix, live, "
-                    "instrumental, and extended mix. Return JSON only with keys search_mode, artist, title, "
-                    "genre, mood, language, region, version, popularity, min_bpm, max_bpm, "
-                    "max_duration, instrumental, keywords. search_mode must be track, artist, genre, or similar. "
-                    "Put important original terms that do not fit another field in keywords. "
-                    "Use null or [] when absent. Original user query: "
-                    f"{query}"
-                )}],
+                "messages": [{"role": "user", "content": f"{prompt} Original user query: {query}"}],
             },
             timeout=self.timeout,
         )
@@ -134,6 +129,7 @@ class AIParser:
         if self.provider == "gemini":
             return await self._parse_gemini_async(query)
         endpoint = urljoin(self.endpoint.rstrip("/") + "/", "chat/completions")
+        prompt = _system_prompt(self.user_language)
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.post(
                 endpoint,
@@ -142,18 +138,7 @@ class AIParser:
                     "model": self.model,
                     "temperature": 0,
                     "response_format": {"type": "json_object"},
-                    "messages": [{"role": "user", "content": (
-                        "You are a strict music search parser, not a recommender. Extract only facts "
-                        "explicitly present in the user's query. Never translate, replace, broaden, "
-                        "or invent a language, country, artist, title, genre, mood, or version. "
-                        "Preserve terms such as Myanmar, Burmese, popular, house, remix, live, "
-                        "instrumental, and extended mix. Return JSON only with keys search_mode, artist, title, "
-                        "genre, mood, language, region, version, popularity, min_bpm, max_bpm, "
-                        "max_duration, instrumental, keywords. search_mode must be track, artist, genre, or similar. "
-                        "Put important original terms that do not fit another field in keywords. "
-                        "Use null or [] when absent. Original user query: "
-                        f"{query}"
-                    )}],
+                    "messages": [{"role": "user", "content": f"{prompt} Original user query: {query}"}],
                 },
             )
             response.raise_for_status()
@@ -164,20 +149,13 @@ class AIParser:
         endpoint = self.endpoint.rstrip("/")
         if not endpoint.endswith(":generateContent"):
             endpoint = f"{endpoint}/models/{self.model}:generateContent"
+        prompt = _system_prompt_gemini(self.user_language)
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.post(
                 endpoint,
                 headers={"Content-Type": "application/json", "X-goog-api-key": self.api_key},
                 json={
-                    "contents": [{"parts": [{"text": (
-                        "You are a strict music search parser, not a recommender. Extract only facts "
-                        "explicitly present in the user's query. Never translate, replace, broaden, "
-                        "or invent a language, country, artist, title, genre, mood, or version. "
-                        "Return JSON only with keys artist, title, genre, mood, language, region, "
-                        "search_mode, version, popularity, min_bpm, max_bpm, max_duration, instrumental, "
-                        "keywords. Original user query: "
-                        f"{query}"
-                    )}]}],
+                    "contents": [{"parts": [{"text": f"{prompt} Original user query: {query}"}]}],
                     "generationConfig": {"temperature": 0, "responseMimeType": "application/json"},
                 },
             )
@@ -186,7 +164,72 @@ class AIParser:
             return _intent_from_values(query, values)
 
 
-def parse_locally(query: str) -> SearchIntent:
+def _system_prompt(language: str = "en") -> str:
+    """Generate culturally-aware system prompt based on user language."""
+    base = (
+        "You are a strict music search parser, not a recommender. Extract only facts "
+        "explicitly present in the user's query. Never translate, replace, broaden, "
+        "or invent a language, country, artist, title, genre, mood, or version. "
+    )
+    
+    if language == "my":  # Burmese
+        cultural_hints = (
+            "Preserve Myanmar/Burmese terms exactly (Myanmar, Burmese, မြန်မာ). "
+            "Common Myanmar genres: အချစ်သီချင်း (love songs), ရော့ခ် (rock), ဟစ်ဟော့ (hip-hop), "
+            "ပေါ့ပ် (pop), အမျိုးသားဂီတ (traditional). "
+            "Common artists: ဆိုင်းဆိုင်းမော်, လေးဖြူ, ရန်ကင်းရန်ရဲ, etc. "
+        )
+    elif language == "zh":  # Chinese
+        cultural_hints = (
+            "Preserve Chinese terms exactly (华语, 粤语, 国语, DJ舞曲, 串烧, 慢摇). "
+            "Common genres: 流行 (pop), 嘻哈 (hip-hop), 电音 (electronic), 摇滚 (rock), "
+            "R&B, 说唱 (rap), 民谣 (folk). Keep artist names in original script. "
+        )
+    else:  # English and others
+        cultural_hints = (
+            "Preserve terms such as Myanmar, Burmese, popular, house, remix, live, "
+            "instrumental, and extended mix. "
+        )
+    
+    schema = (
+        "Return JSON only with keys search_mode, artist, title, "
+        "genre, mood, language, region, version, popularity, min_bpm, max_bpm, "
+        "max_duration, instrumental, keywords. search_mode must be track, artist, genre, or similar. "
+        "Put important original terms that do not fit another field in keywords. "
+        "Use null or [] when absent."
+    )
+    
+    return base + cultural_hints + schema
+
+
+def _system_prompt_gemini(language: str = "en") -> str:
+    """Gemini-specific prompt (no response_format field names in content)."""
+    base = (
+        "You are a strict music search parser, not a recommender. Extract only facts "
+        "explicitly present in the user's query. Never translate, replace, broaden, "
+        "or invent a language, country, artist, title, genre, mood, or version. "
+    )
+    
+    if language == "my":
+        cultural_hints = (
+            "Preserve Myanmar/Burmese terms exactly. Common Myanmar genres: "
+            "အချစ်သီချင်း, ရော့ခ်, ဟစ်ဟော့, ပေါ့ပ်, အမျိုးသားဂီတ. "
+        )
+    elif language == "zh":
+        cultural_hints = (
+            "Preserve Chinese terms exactly (华语, 粤语, DJ舞曲, 串烧). "
+            "Common genres: 流行, 嘻哈, 电音, 摇滚, R&B, 说唱, 民谣. "
+        )
+    else:
+        cultural_hints = "Preserve Myanmar, Burmese, remix, live, instrumental, extended mix. "
+    
+    schema = (
+        "Return JSON only with keys artist, title, genre, mood, language, region, "
+        "search_mode, version, popularity, min_bpm, max_bpm, max_duration, instrumental, "
+        "keywords."
+    )
+    
+    return base + cultural_hints + schema
     values: dict[str, object] = {}
     bpm = re.search(r"(?:between\s+)?(\d{2,3})\s*(?:-|to)\s*(\d{2,3})\s*bpm", query, re.I)
     if bpm:

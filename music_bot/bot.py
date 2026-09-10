@@ -29,6 +29,7 @@ from .exports import metadata_record, write_metadata_exports
 from .source_catalog import SOURCE_CATALOG, source_definition
 from .preferences import Preferences
 from .provider_capabilities import detect_provider
+from .search_history import SearchHistory
 from .ui import emoji
 
 LOGGER = logging.getLogger(__name__)
@@ -69,6 +70,8 @@ BOT_COMMANDS = [
     BotCommand("aisearch", "AI-assisted DJ source search"),
     BotCommand("title", "Search by song title"),
     BotCommand("artist", "Search by artist name"),
+    BotCommand("history", "View recent searches"),
+    BotCommand("favorites", "View favorite searches"),
     BotCommand("language", "Choose interface language"),
     BotCommand("menu", "Show the music keyboard"),
 ]
@@ -93,10 +96,93 @@ def create_application(config: Config) -> Application:
         .build()
     )
     semaphore = asyncio.Semaphore(config.download_workers)
-    ai_parser = AIParser()
     preferences = Preferences(Path("runtime/preferences.db"))
+    search_history = SearchHistory(Path("runtime/search_history.db"))
 
-    async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    def get_ai_parser(context: ContextTypes.DEFAULT_TYPE) -> AIParser:
+        """Create AIParser with user's language context."""
+        language = context.user_data.get("language", "en")
+        return AIParser(user_language=language)
+
+    async def history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Show recent search history with re-run option."""
+        if not update.message or not update.effective_user:
+            return
+        recent = search_history.get_recent(update.effective_user.id, limit=10)
+        if not recent:
+            await update.message.reply_text(
+                "📜 No search history yet.\nStart searching with /search or /aisearch!",
+                parse_mode="HTML",
+            )
+            return
+        
+        text = "📜 <b>Recent Searches</b>\n━━━━━━━━━━━━━━━━━━\n\n"
+        buttons = []
+        for i, entry in enumerate(recent, 1):
+            fav_icon = "⭐" if entry.is_favorite else ""
+            text += f"{i}. {fav_icon}<code>{escape(entry.query[:50])}</code>\n"
+            text += f"   📊 {entry.result_count} results\n\n"
+            buttons.append([
+                InlineKeyboardButton(f"🔁 Re-run #{i}", callback_data=f"history_rerun:{entry.query}"),
+                InlineKeyboardButton(f"{'⭐ Unfav' if entry.is_favorite else '⭐ Favorite'}", callback_data=f"history_fav:{entry.query}"),
+            ])
+        
+        await update.message.reply_text(
+            text,
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(buttons[:10]),
+        )
+
+    async def favorites_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Show favorite searches."""
+        if not update.message or not update.effective_user:
+            return
+        favorites = search_history.get_favorites(update.effective_user.id)
+        if not favorites:
+            await update.message.reply_text(
+                "⭐ No favorites yet.\nMark searches as favorites from /history!",
+                parse_mode="HTML",
+            )
+            return
+        
+        text = "⭐ <b>Favorite Searches</b>\n━━━━━━━━━━━━━━━━━━\n\n"
+        buttons = []
+        for i, entry in enumerate(favorites, 1):
+            text += f"{i}. <code>{escape(entry.query[:50])}</code>\n"
+            text += f"   📊 {entry.result_count} results\n\n"
+            buttons.append([InlineKeyboardButton(f"🔁 Re-run #{i}", callback_data=f"history_rerun:{entry.query}")])
+        
+        await update.message.reply_text(
+            text,
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(buttons),
+        )
+
+    async def history_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Handle history re-run and favorite toggle."""
+        query = update.callback_query
+        if not query or not query.data or not update.effective_user:
+            return
+        
+        await query.answer()
+        action, search_query = query.data.split(":", 1)
+        
+        if action == "history_rerun":
+            # Re-run the search
+            context.user_data["pending_search_query"] = search_query
+            await query.message.edit_text(
+                f"🔁 Re-running search: <code>{escape(search_query)}</code>",
+                parse_mode="HTML",
+            )
+            # Trigger search
+            await run_search(update, context, search_query, use_ai=True)
+        
+        elif action == "history_fav":
+            # Toggle favorite
+            new_status = search_history.toggle_favorite(update.effective_user.id, search_query)
+            await query.answer(f"{'⭐ Added to' if new_status else '❌ Removed from'} favorites")
+            # Refresh history view
+            await history_handler(update, context)
         if update.message:
             await update.message.reply_text(HELP_TEXTS[_language(context)], parse_mode="HTML", disable_web_page_preview=True, reply_markup=_menu(context))
 
@@ -134,7 +220,7 @@ def create_application(config: Config) -> Application:
             parse_mode="HTML",
         )
         try:
-            parsed = await ai_parser.parse_async(query) if use_ai else None
+            parsed = await get_ai_parser(context).parse_async(query) if use_ai else None
             intent = parsed.intent if parsed else None
             if use_ai and parsed:
                 if parsed.used_ai:
@@ -164,9 +250,13 @@ def create_application(config: Config) -> Application:
                     if update.effective_user
                     else "youtube"
                 ),
+                intent=intent,
             )
             if not results:
                 raise DownloadError("No results under 15 minutes were found. Try another keyword.")
+            # Record search in history
+            if update.effective_user:
+                search_history.add(update.effective_user.id, query, intent, len(results))
             context.user_data["search_results"] = results
             context.user_data["search_query"] = query
             context.user_data["search_field"] = field
@@ -482,6 +572,71 @@ def create_application(config: Config) -> Application:
             return
         await run_filtered_search(update, context, genre=genre)
 
+    async def quickfilter_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Handle quick DJ filter buttons (BPM, Energy, Duration)."""
+        query = update.callback_query
+        if not query or query.from_user.id != context.user_data.get("search_owner"):
+            return
+        
+        filter_type = (query.data or "").split(":", 1)[1]
+        await query.answer()
+        
+        if filter_type == "bpm":
+            keyboard = [
+                [InlineKeyboardButton("🥁 60-90 BPM (Hip-Hop/Chill)", callback_data="bpmfilter:60-90")],
+                [InlineKeyboardButton("🥁 90-110 BPM (Trap/Moombah)", callback_data="bpmfilter:90-110")],
+                [InlineKeyboardButton("🥁 120-130 BPM (House)", callback_data="bpmfilter:120-130")],
+                [InlineKeyboardButton("🥁 130-140 BPM (Techno)", callback_data="bpmfilter:130-140")],
+                [InlineKeyboardButton("🥁 140-180 BPM (D&B/Hardstyle)", callback_data="bpmfilter:140-180")],
+                [InlineKeyboardButton("↩️ Back", callback_data="filter:back")],
+            ]
+        elif filter_type == "energy":
+            keyboard = [
+                [InlineKeyboardButton("🔥 High Energy (Fast/Aggressive)", callback_data="energyfilter:high")],
+                [InlineKeyboardButton("⚡ Medium Energy (Groovy)", callback_data="energyfilter:medium")],
+                [InlineKeyboardButton("🌙 Low Energy (Chill/Ambient)", callback_data="energyfilter:low")],
+                [InlineKeyboardButton("↩️ Back", callback_data="filter:back")],
+            ]
+        elif filter_type == "duration":
+            keyboard = [
+                [InlineKeyboardButton("⏱️ Under 3 min (Radio Edit)", callback_data="durationfilter:0-180")],
+                [InlineKeyboardButton("⏱️ 3-5 min (Standard)", callback_data="durationfilter:180-300")],
+                [InlineKeyboardButton("⏱️ 5-8 min (Extended)", callback_data="durationfilter:300-480")],
+                [InlineKeyboardButton("⏱️ 8+ min (Long Mix)", callback_data="durationfilter:480-900")],
+                [InlineKeyboardButton("↩️ Back", callback_data="filter:back")],
+            ]
+        else:
+            return
+        
+        await query.edit_message_reply_markup(reply_markup=InlineKeyboardMarkup(keyboard))
+
+    async def apply_quick_filter(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Apply BPM/energy/duration quick filters and refresh results."""
+        query = update.callback_query
+        if not query or query.from_user.id != context.user_data.get("search_owner"):
+            return
+        
+        filter_data = query.data or ""
+        if filter_data.startswith("bpmfilter:"):
+            bpm_range = filter_data.split(":", 1)[1]
+            context.user_data.setdefault("advanced_filters", {})["bpm_range"] = bpm_range
+            await query.answer(f"🥁 BPM {bpm_range} filter applied")
+        elif filter_data.startswith("energyfilter:"):
+            energy = filter_data.split(":", 1)[1]
+            context.user_data.setdefault("advanced_filters", {})["energy"] = energy
+            await query.answer(f"🔥 {energy.title()} energy filter applied")
+        elif filter_data.startswith("durationfilter:"):
+            duration = filter_data.split(":", 1)[1]
+            min_dur, max_dur = map(int, duration.split("-"))
+            # Filter results by duration
+            results = context.user_data.get("search_results", [])
+            filtered = [r for r in results if min_dur <= r.duration <= max_dur]
+            context.user_data["search_results"] = filtered
+            await query.answer(f"⏱️ Duration {min_dur//60}-{max_dur//60}min filter applied")
+        
+        # Refresh search page
+        await _show_search_page(query.message, context, 0)
+
     async def advanced_filter_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
         if not query or query.from_user.id != context.user_data.get("search_owner"):
@@ -632,12 +787,17 @@ def create_application(config: Config) -> Application:
             await status.edit_text("❌ An unexpected error occurred while downloading.")
 
     application.add_handler(CommandHandler(["start", "help"], help_handler))
+    application.add_handler(CommandHandler("history", history_handler))
+    application.add_handler(CommandHandler("favorites", favorites_handler))
     application.add_handler(CommandHandler("language", language_handler))
     application.add_handler(CommandHandler("menu", menu_handler))
     application.add_handler(CommandHandler("settings", settings_handler))
     application.add_handler(CommandHandler("search", search_command))
     application.add_handler(CommandHandler("aisearch", ai_search_command))
     application.add_handler(CallbackQueryHandler(ai_confirmation_handler, pattern=r"^ai_(confirm|edit)$"))
+    application.add_handler(CallbackQueryHandler(history_callback_handler, pattern=r"^history_(rerun|fav):.+$"))
+    application.add_handler(CallbackQueryHandler(quickfilter_handler, pattern=r"^quickfilter:(bpm|energy|duration)$"))
+    application.add_handler(CallbackQueryHandler(apply_quick_filter, pattern=r"^(bpmfilter|energyfilter|durationfilter):.+$"))
     application.add_handler(CommandHandler(["title", "artist"], field_command))
     application.add_handler(CallbackQueryHandler(pick_handler, pattern=r"^pick:\d+$"))
     application.add_handler(CallbackQueryHandler(next_handler, pattern=r"^next:\d+$"))
@@ -674,7 +834,16 @@ async def _show_search_page(message, context: ContextTypes.DEFAULT_TYPE, page: i
         navigation.append(InlineKeyboardButton("Next ➡️", callback_data=f"next:{page + 1}"))
     if navigation:
         keyboard.append(navigation)
-    keyboard.append([InlineKeyboardButton("⚙️ Filters", callback_data="filters")])
+    
+    # Quick DJ filters row
+    dj_filters = [
+        InlineKeyboardButton("🥁 BPM", callback_data="quickfilter:bpm"),
+        InlineKeyboardButton("🔥 Energy", callback_data="quickfilter:energy"),
+        InlineKeyboardButton("⏱️ Duration", callback_data="quickfilter:duration"),
+    ]
+    keyboard.append(dj_filters)
+    keyboard.append([InlineKeyboardButton("⚙️ All Filters", callback_data="filters")])
+    
     await _edit_result_message(
         message,
         f"🎧 <b>Choose a track</b>\nPage {page + 1} of {(len(results) + SEARCH_PAGE_SIZE - 1) // SEARCH_PAGE_SIZE}\n\nTap a result to download:\n<i>🎵 title  •  👤 artist  •  ⏱ duration  •  🌐 source</i>",
@@ -750,11 +919,12 @@ async def search_multiple_sources(
     *,
     max_duration: int,
     cookies_file: str | None = None,
+    intent = None,
 ) -> list[SearchResult]:
-    """Search independent public providers concurrently for AI mode."""
+    """Search independent public providers concurrently for AI mode with intent awareness."""
     searches = await asyncio.gather(
-        asyncio.to_thread(search_tracks, query, max_duration=max_duration, cookies_file=cookies_file, source="youtube"),
-        asyncio.to_thread(search_tracks, query, max_duration=max_duration, cookies_file=cookies_file, source="soundcloud"),
+        asyncio.to_thread(search_tracks, query, max_duration=max_duration, cookies_file=cookies_file, source="youtube", intent=intent),
+        asyncio.to_thread(search_tracks, query, max_duration=max_duration, cookies_file=cookies_file, source="soundcloud", intent=intent),
         return_exceptions=True,
     )
     results: list[SearchResult] = []
@@ -764,7 +934,7 @@ async def search_multiple_sources(
     if not results:
         raise DownloadError("No public results were found from YouTube or SoundCloud.")
     from .downloader import rank_search_results
-    return rank_search_results(results, query)
+    return rank_search_results(results, query, intent)
 
 
 def _format_bpm(bpm: float | None) -> str:

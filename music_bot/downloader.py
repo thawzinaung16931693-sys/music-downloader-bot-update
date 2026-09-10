@@ -63,6 +63,7 @@ def search_tracks(
     max_duration: int = MAX_SEARCH_DURATION_SECONDS,
     cookies_file: str | None = None,
     source: str = "youtube",
+    intent = None,
 ) -> list[SearchResult]:
     search_url = build_search_url(query, field=field)
     if source == "soundcloud":
@@ -111,14 +112,14 @@ def search_tracks(
         )
     if not results:
         raise DownloadError("No public results were found for that search.")
-    return rank_search_results(results, query)
+    return rank_search_results(results, query, intent)
 
 
-def rank_search_results(results: list[SearchResult], query: str) -> list[SearchResult]:
-    """Rank provider results for accurate, DJ-oriented search ordering."""
+def rank_search_results(results: list[SearchResult], query: str, intent=None) -> list[SearchResult]:
+    """Rank provider results for accurate, DJ-oriented search ordering with optional AI intent."""
     tokens = _search_tokens(query)
     ranked = [
-        replace(result, match_score=round(max(0.0, min(100.0, _result_score(result, tokens)))))
+        replace(result, match_score=round(max(0.0, min(100.0, _result_score(result, tokens, intent)))))
         for result in results
     ]
     ranked.sort(key=lambda result: result.match_score, reverse=True)
@@ -126,14 +127,14 @@ def rank_search_results(results: list[SearchResult], query: str) -> list[SearchR
 
 
 def explain_match(result: SearchResult) -> str:
-    """Return a user-safe explanation of the deterministic match score."""
+    """Return a user-safe explanation of the deterministic match score with emoji."""
     if result.match_score >= 80:
-        return "Excellent match"
+        return "🎯 Excellent match"
     if result.match_score >= 55:
-        return "Strong match"
+        return "✅ Strong match"
     if result.match_score >= 30:
-        return "Possible match"
-    return "Broad match"
+        return "🔍 Possible match"
+    return "📋 Broad match"
 
 
 def apply_advanced_filters(
@@ -219,7 +220,8 @@ def _search_tokens(query: str) -> set[str]:
     }
 
 
-def _result_score(result: SearchResult, tokens: set[str]) -> float:
+def _result_score(result: SearchResult, tokens: set[str], intent=None) -> float:
+    """Score search result with optional AI intent (BPM/genre/mood matching)."""
     title = result.title.casefold()
     artist = result.artist.casefold()
     haystack = f"{title} {artist}"
@@ -240,6 +242,29 @@ def _result_score(result: SearchResult, tokens: set[str]) -> float:
     if {"myanmar", "burmese"} & tokens:
         regional_terms = ("myanmar", "burmese", "မြန်မာ", "yangon", "mandalay")
         score += 40.0 if any(term in haystack for term in regional_terms) else -35.0
+    
+    # AI intent boosting: genre, mood, version matching
+    if intent:
+        if intent.genre and intent.genre.casefold() in haystack:
+            score += 15.0
+        if intent.mood and intent.mood.casefold() in haystack:
+            score += 10.0
+        if intent.version:
+            version_lower = intent.version.casefold()
+            if version_lower in title:
+                score += 18.0
+            elif any(v in title for v in ["remix", "mix", "edit", "version"] if v in version_lower):
+                score += 8.0
+        # BPM proximity bonus (if we had BPM metadata in results, we'd use it here)
+        # For now, just boost if BPM keyword appears
+        if intent.min_bpm and (str(int(intent.min_bpm)) in title or "bpm" in title):
+            score += 12.0
+        # Artist/title exact match boost
+        if intent.artist and intent.artist.casefold() in artist:
+            score += 20.0
+        if intent.title and intent.title.casefold() in title:
+            score += 20.0
+    
     return score
 
 
